@@ -6,4 +6,4 @@ FROM mcr.microsoft.com/vscode/devcontainers/rust:1-${VARIANT}
 
 RUN rustup update && rustup update stable
 
-RUN cargo install binstall && cargo binstall cargo-watch
+RUN cargo install cargo-watch && cargo install binstall && cargo install starship --locked
