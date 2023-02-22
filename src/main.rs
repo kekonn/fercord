@@ -6,9 +6,22 @@ use serenity::framework::StandardFramework;
 use serenity::prelude::*;
 
 use discord::*;
+use tracing::*;
 
 #[tokio::main]
+#[tracing::instrument]
 async fn main() -> anyhow::Result<()> {
+    let subscriber = tracing_subscriber::FmtSubscriber::new();
+    let current_span = subscriber.current_span();
+
+    tracing::subscriber::set_global_default(subscriber)?;
+
+    if let Some(span_metadata) = current_span.metadata() {
+        println!("{:?}", span_metadata);
+    }
+    
+
+    debug!("Reading configuration");
     // Load application config
     let config = config::DiscordConfig::from_env_and_file(".config/config.toml")?;
 

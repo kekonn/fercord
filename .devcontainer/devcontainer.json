@@ -13,6 +13,17 @@
 		"--security-opt",
 		"seccomp=unconfined"
 	],
+	"containerEnv": {
+		"RUST_BACKTRACE": "1",
+		"RUST_LOG": "info,main=debug"
+	},
+
+	"postCreateCommand": [
+		"bash -i 'cargo install cargo-binstall && cargo binstall -y cargo-watch && cargo binstall -y ripgrep'"
+	],
+	"postStartCommand": [
+		"cd ${containerWorkspaceFolder} && cargo build"
+	],
 
 	// Configure tool-specific properties.
 	"customizations": {
@@ -25,7 +36,8 @@
 				"files.watcherExclude": {
 					"**/target/**": true
 				},
-				"rust-analyzer.checkOnSave.command": "clippy"
+				"rust-analyzer.checkOnSave.command": "clippy",
+				"testExplorer.useNativeTesting": true
 			},
 			
 			// Add the IDs of extensions you want installed when the container is created.
@@ -34,7 +46,9 @@
 				"mutantdino.resourcemonitor",
 				"rust-lang.rust-analyzer",
 				"tamasfe.even-better-toml",
-				"serayuzgur.crates"
+				"serayuzgur.crates",
+				"hbenl.vscode-test-explorer",
+				"Swellaby.vscode-rust-test-adapter"
 			]
 		}
 	},

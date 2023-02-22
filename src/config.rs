@@ -25,6 +25,7 @@ impl DiscordConfig {
     ///  
     /// This will read all variables prefixed with `FERIS_` and try to serialize them into a `DiscordConfig`.
     #[allow(dead_code)]
+    #[tracing::instrument]
     pub fn from_env() -> Result<Self> {
         let builder =
             config::Config::builder().add_source(config::Environment::with_prefix(ENV_PREFIX));
@@ -44,6 +45,7 @@ impl DiscordConfig {
     ///
     /// For more info about how the environment variables are read, see [from_env()](#from_env).
     #[allow(dead_code)]
+    #[tracing::instrument]
     pub fn from_env_and_file(path: &str) -> Result<Self> {
         let builder = config::Config::builder()
             .add_source(config::File::with_name(path))
