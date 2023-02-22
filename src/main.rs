@@ -1,45 +1,46 @@
 mod config;
 mod discord;
+mod settings;
 
-use anyhow::Context;
-use serenity::framework::StandardFramework;
-use serenity::prelude::*;
+use anyhow::{ Context, anyhow };
+use poise::serenity_prelude as serenity;
 
-use discord::*;
 use tracing::*;
+use discord::*;
 
 #[tokio::main]
-#[tracing::instrument]
 async fn main() -> anyhow::Result<()> {
-    let subscriber = tracing_subscriber::FmtSubscriber::new();
-    let current_span = subscriber.current_span();
-
-    tracing::subscriber::set_global_default(subscriber)?;
-
-    if let Some(span_metadata) = current_span.metadata() {
-        println!("{:?}", span_metadata);
-    }
-    
+    tracing_subscriber::fmt::init();
 
     debug!("Reading configuration");
     // Load application config
     let config = config::DiscordConfig::from_env_and_file(".config/config.toml")?;
 
     // Client setup
+    debug_span!("Discord client setup");
     let token = config.discord_token.as_str();
-    let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
-    let framework = StandardFramework::new()
-        .configure(|c| c)
-        .group(&GENERAL_GROUP);
+    let framework = poise::Framework
+        ::builder()
+        .options(poise::FrameworkOptions {
+            commands: vec![reminder(),zuigt_ge_nog()],
+            ..Default::default()
+        })
+        .token(token)
+        .intents(
+            serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT
+        )
+        .setup(|ctx, _ready, framework| {
+            Box::pin(async move {
+                poise::builtins
+                    ::register_globally(ctx, &framework.options().commands).await
+                    .with_context(|| "Error creating Discord client")?;
 
-    let mut client = Client::builder(token, intents)
-        .event_handler(DiscordHandler)
-        .framework(framework)
-        .await
-        .with_context(|| "Error creating discord client")
-        .unwrap();
-    
-    client.start().await.with_context(|| "Error starting Discord client")?;
+                Ok(config.clone())
+            })
+        });
 
-    Ok(())
+    match framework.run_autosharded().await {
+        Err(e) => Err(anyhow!(e)),
+        Ok(_) => Ok(()),
+    }
 }

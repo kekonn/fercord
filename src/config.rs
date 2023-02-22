@@ -12,7 +12,7 @@ use anyhow::{Context, Result};
 /// The application configuration.
 ///
 /// You can use [from_env()](#from_env) or [from_env_and_file(path: &str)](#from_end_and_path) to create a configuration.
-#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq, Clone)]
 pub struct DiscordConfig {
     /// The Discord API token.
     pub discord_token: String,
