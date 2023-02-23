@@ -1,5 +1,6 @@
 mod config;
 mod discord;
+mod storage;
 
 use anyhow::{ Context, anyhow };
 use poise::serenity_prelude as serenity;
@@ -9,14 +10,18 @@ use discord::*;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt::init();
+    let subscriber = tracing_subscriber::fmt().
 
-    debug!("Reading configuration");
+    event!(Level::DEBUG, "Reading configuration");
     // Load application config
     let config = config::DiscordConfig::from_env_and_file(".config/config.toml")?;
 
+    // Database setup
+    event!(Level::DEBUG, "Setting up database");
+    let _db = storage::db::db_from_config(&config).await?;
+
     // Client setup
-    debug_span!("Discord client setup");
+    event!(Level::DEBUG, "Discord client setup");
     let token = config.discord_token.as_str();
     let framework = poise::Framework
         ::builder()
