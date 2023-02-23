@@ -10,7 +10,7 @@ use discord::*;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let subscriber = tracing_subscriber::fmt().
+    tracing_subscriber::fmt::init();
 
     event!(Level::DEBUG, "Reading configuration");
     // Load application config
@@ -18,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Database setup
     event!(Level::DEBUG, "Setting up database");
-    let _db = storage::db::db_from_config(&config).await?;
+    let _db = storage::db::create_connection(&config).await?;
 
     // Client setup
     event!(Level::DEBUG, "Discord client setup");
