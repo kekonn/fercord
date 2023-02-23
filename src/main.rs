@@ -1,6 +1,5 @@
 mod config;
 mod discord;
-mod settings;
 
 use anyhow::{ Context, anyhow };
 use poise::serenity_prelude as serenity;
