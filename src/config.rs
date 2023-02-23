@@ -16,6 +16,10 @@ use anyhow::{Context, Result};
 pub struct DiscordConfig {
     /// The Discord API token.
     pub discord_token: String,
+    /// The url for the SQLite database
+    /// 
+    /// Usual format: `sqlite://fercord.db`
+    pub database_url: String,
 }
 
 const ENV_PREFIX: &str = "FERCORD";
@@ -96,6 +100,7 @@ mod tests {
     fn can_deserialize_toml() {
         let expected = DiscordConfig {
             discord_token: "111".into(),
+            database_url: "sqlite://:memory:".into()
         };
 
         let config = DiscordConfig::from_file(".testdata/basic_config.toml").unwrap();
@@ -110,6 +115,7 @@ mod tests {
 
         let expected = DiscordConfig {
             discord_token: "222".into(),
+            database_url: "sqlite://:memory:".into()
         };
 
         // Act
