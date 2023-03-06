@@ -16,9 +16,9 @@ use anyhow::{Context, Result};
 pub struct DiscordConfig {
     /// The Discord API token.
     pub discord_token: String,
-    /// The url for the SQLite database
+    /// The url for the SQLite database.
     /// 
-    /// Usual format: `sqlite://fercord.db`
+    /// Usual format: `sqlite://fercord.db` or `redis://localhost/`
     pub database_url: String,
 }
 

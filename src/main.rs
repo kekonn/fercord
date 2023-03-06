@@ -4,9 +4,16 @@ mod storage;
 
 use anyhow::{ Context, anyhow };
 use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::Activity;
 
 use tracing::*;
 use discord::*;
+
+use crate::storage::kv::KVClient;
+
+pub struct ServerData {
+    pub kv_client: crate::storage::kv::KVClient,
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -16,17 +23,13 @@ async fn main() -> anyhow::Result<()> {
     // Load application config
     let config = config::DiscordConfig::from_env_and_file(".config/config.toml")?;
 
-    // Database setup
-    event!(Level::DEBUG, "Setting up database");
-    let _db = storage::db::create_connection(&config).await?;
-
     // Client setup
     event!(Level::DEBUG, "Discord client setup");
     let token = config.discord_token.as_str();
     let framework = poise::Framework
         ::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![reminder(),zuigt_ge_nog()],
+            commands: vec![reminder(), zuigt_ge_nog(), timezone()],
             ..Default::default()
         })
         .token(token)
@@ -35,11 +38,18 @@ async fn main() -> anyhow::Result<()> {
         )
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
+                ctx.reset_presence().await;
+                ctx.set_activity(Activity::watching("all of you")).await;
+
                 poise::builtins
                     ::register_globally(ctx, &framework.options().commands).await
                     .with_context(|| "Error creating Discord client")?;
 
-                Ok(config.clone())
+                let kv_client = KVClient::new(&config)?;
+
+                Ok(ServerData {
+                    kv_client
+                })
             })
         });
 
