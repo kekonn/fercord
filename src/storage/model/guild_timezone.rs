@@ -1,8 +1,8 @@
-use serde::{Serialize, Deserialize};
+use anyhow::{anyhow, Result};
 use chrono_tz::Tz;
-use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
 
-use crate::storage::kv::{KVIdentity, Identifiable};
+use crate::storage::kv::{Identifiable, KVIdentity};
 
 /// Contains the timezone set for a certain guild.
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Default)]

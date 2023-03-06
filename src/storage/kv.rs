@@ -1,8 +1,10 @@
-
+use anyhow::{anyhow, Result};
 use redis::{AsyncCommands, Client, ToRedisArgs};
-use anyhow::{Result, anyhow};
-use serde::{Serialize, de::DeserializeOwned};
-use std::{marker::{Send, Sync}, fmt::Debug};
+use serde::{de::DeserializeOwned, Serialize};
+use std::{
+    fmt::Debug,
+    marker::{Send, Sync},
+};
 use tracing::*;
 
 use crate::config::DiscordConfig;
@@ -10,11 +12,11 @@ use crate::config::DiscordConfig;
 pub type KVIdentity = String;
 
 /// A generic KV store client.
-/// 
+///
 /// ## Creation
 /// Create a new client by calling `KVClient::`
 pub struct KVClient {
-    client: Client
+    client: Client,
 }
 
 /// Marks an object as identifyable to the KV Client.
@@ -31,13 +33,22 @@ impl KVClient {
     }
 
     /// Save a value to the KV store.
-    pub async fn save<T>(&self, record: T) -> Result<()> 
-        where T: Identifiable + Serialize + Send + Sync + ToRedisArgs + Debug
+    pub async fn save<T>(&self, record: T) -> Result<()>
+    where
+        T: Identifiable + Serialize + Send + Sync + ToRedisArgs + Debug,
     {
-        let span = trace_span!("storage.kv_client", record = field::Empty, save_key = field::Empty);
+        let span = trace_span!(
+            "storage.kv_client",
+            record = field::Empty,
+            save_key = field::Empty
+        );
         let _enter = span.enter();
         span.record("record", field::debug(&record));
-        event!(parent: &span, Level::TRACE, "Saving a record to the KV store");
+        event!(
+            parent: &span,
+            Level::TRACE,
+            "Saving a record to the KV store"
+        );
 
         let con = &mut self.client.get_async_connection().await?;
 
@@ -50,15 +61,20 @@ impl KVClient {
                 error!(?e, "Error saving valing to kv store");
 
                 Err(anyhow!(e))
-            },
+            }
         }
     }
 
     /// Save complex objects as json in redis.
-    pub async fn save_json<T>(&self, record: T) -> Result<()> 
-        where T: Identifiable + Serialize + Send + Sync + Debug
+    pub async fn save_json<T>(&self, record: T) -> Result<()>
+    where
+        T: Identifiable + Serialize + Send + Sync + Debug,
     {
-        let span = trace_span!("storage.kv_client", record = field::Empty, save_key = field::Empty);
+        let span = trace_span!(
+            "storage.kv_client",
+            record = field::Empty,
+            save_key = field::Empty
+        );
         let _enter = span.enter();
         span.record("record", field::debug(&record));
         event!(Level::TRACE, "Saving a record to the KV store in json mode");
@@ -76,15 +92,20 @@ impl KVClient {
                 error!(?e, "Error saving valing to kv store");
 
                 Err(anyhow!(e))
-            },
+            }
         }
     }
 
     /// Retrieve a complex record for the given key.
-    pub async fn get_json<T>(&self, record: &T) -> Result<T> 
-        where T: DeserializeOwned + Send + Sync + Debug + Identifiable
+    pub async fn get_json<T>(&self, record: &T) -> Result<T>
+    where
+        T: DeserializeOwned + Send + Sync + Debug + Identifiable,
     {
-        let span = trace_span!("storage.kv_client", record = field::Empty, object_key = field::Empty);
+        let span = trace_span!(
+            "storage.kv_client",
+            record = field::Empty,
+            object_key = field::Empty
+        );
         let _enter = span.enter();
 
         let key = record.kv_key();
@@ -95,11 +116,11 @@ impl KVClient {
         let con = &mut self.client.get_async_connection().await?;
 
         let json: String = con.get(key).await?;
-        
+
         let record = serde_json::from_str(json.as_str())?;
 
         span.record("record", field::debug(&record));
 
         Ok(record)
-    }   
+    }
 }

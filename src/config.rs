@@ -17,7 +17,7 @@ pub struct DiscordConfig {
     /// The Discord API token.
     pub discord_token: String,
     /// The url for the SQLite database.
-    /// 
+    ///
     /// Usual format: `sqlite://fercord.db` or `redis://localhost/`
     pub database_url: String,
 }
@@ -65,7 +65,7 @@ impl DiscordConfig {
     }
 
     /// Create a configuration from the given file.
-    /// 
+    ///
     /// Only here to test the file loading without environment influence.
     #[cfg(test)]
     fn from_file(path: &str) -> Result<Self> {
@@ -100,7 +100,7 @@ mod tests {
     fn can_deserialize_toml() {
         let expected = DiscordConfig {
             discord_token: "111".into(),
-            database_url: "sqlite://:memory:".into()
+            database_url: "sqlite://:memory:".into(),
         };
 
         let config = DiscordConfig::from_file(".testdata/basic_config.toml").unwrap();
@@ -115,7 +115,7 @@ mod tests {
 
         let expected = DiscordConfig {
             discord_token: "222".into(),
-            database_url: "sqlite://:memory:".into()
+            database_url: "sqlite://:memory:".into(),
         };
 
         // Act

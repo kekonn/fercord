@@ -20,7 +20,7 @@ include = [
 
 [dependencies]
 poise = "0.5"
-tokio = { version = "1", features = ["default", "rt-multi-thread", "fs"]}
+tokio = { version = "1", features = ["default", "rt-multi-thread", "time"]}
 config = { version = "0.13", default-features = false, features = ["toml"] }
 anyhow = "1"
 serde = { version = "1", features = ["derive"]}

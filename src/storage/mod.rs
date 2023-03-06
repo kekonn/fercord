@@ -7,3 +7,6 @@ pub mod kv;
 
 /// All the storage models
 pub mod model;
+
+/// Database access
+pub mod db;

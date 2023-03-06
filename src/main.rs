@@ -1,13 +1,13 @@
 mod config;
 mod discord;
 mod storage;
+mod timed_job;
 
-use anyhow::{ Context, anyhow };
+use anyhow::{anyhow, Context};
+use discord::*;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::Activity;
-
 use tracing::*;
-use discord::*;
 
 use crate::storage::kv::KVClient;
 
@@ -26,30 +26,29 @@ async fn main() -> anyhow::Result<()> {
     // Client setup
     event!(Level::DEBUG, "Discord client setup");
     let token = config.discord_token.as_str();
-    let framework = poise::Framework
-        ::builder()
+    let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: vec![reminder(), zuigt_ge_nog(), timezone()],
             ..Default::default()
         })
         .token(token)
         .intents(
-            serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT
+            serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT,
         )
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 ctx.reset_presence().await;
                 ctx.set_activity(Activity::watching("all of you")).await;
 
-                poise::builtins
-                    ::register_globally(ctx, &framework.options().commands).await
+                // TODO: Figure out how to start and stop background worker
+
+                poise::builtins::register_globally(ctx, &framework.options().commands)
+                    .await
                     .with_context(|| "Error creating Discord client")?;
 
                 let kv_client = KVClient::new(&config)?;
 
-                Ok(ServerData {
-                    kv_client
-                })
+                Ok(ServerData { kv_client })
             })
         });
 
