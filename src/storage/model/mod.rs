@@ -9,7 +9,7 @@ pub mod guild_timezone;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
-struct DiscordWhere {
+pub struct DiscordWhere {
     pub server: u64,
     pub channel: u64,
 }
