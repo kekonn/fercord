@@ -2,14 +2,6 @@
 name = "fercord"
 version = "0.1.0"
 edition = "2021"
-exclude = [
-    ".testdata",
-    ".config",
-    ".devcontainer",
-    ".github",
-    ".idea",
-    ".vscode"
-]
 include = [
     "src/*.rs",
     "**/*.md",
@@ -32,6 +24,7 @@ chrono-tz = "0.8"
 chrono-english = "0.1"
 redis = { version = "0.22", features = ["tokio-comp", "json"] }
 reqwest = { version = "0.11", features = ["stream", "rustls-tls"]}
+
 
 # dev dependencies
 [dev-dependencies]
