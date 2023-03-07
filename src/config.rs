@@ -16,10 +16,12 @@ use anyhow::{Context, Result};
 pub struct DiscordConfig {
     /// The Discord API token.
     pub discord_token: String,
-    /// The url for the SQLite database.
+    /// The url for the database.
     ///
-    /// Usual format: `sqlite://fercord.db` or `redis://localhost/`
+    /// Usual format: `postgres://usernane:pw@server/db`
     pub database_url: String,
+    /// Url to indicate the redis instance to use.
+    pub redis_url: String,
 }
 
 const ENV_PREFIX: &str = "FERCORD";
@@ -101,6 +103,7 @@ mod tests {
         let expected = DiscordConfig {
             discord_token: "111".into(),
             database_url: "sqlite://:memory:".into(),
+            redis_url: "redis://localhost".into()
         };
 
         let config = DiscordConfig::from_file(".testdata/basic_config.toml").unwrap();
@@ -116,6 +119,7 @@ mod tests {
         let expected = DiscordConfig {
             discord_token: "222".into(),
             database_url: "sqlite://:memory:".into(),
+            redis_url: "redis://localhost".into()
         };
 
         // Act

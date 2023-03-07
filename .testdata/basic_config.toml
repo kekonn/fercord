@@ -1,2 +1,3 @@
 discord_token = "111"
 database_url = "sqlite://:memory:"
+redis_url = "redis://localhost"

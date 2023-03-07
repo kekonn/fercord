@@ -24,8 +24,7 @@ chrono-tz = "0.8"
 chrono-english = "0.1"
 redis = { version = "0.22", features = ["tokio-comp", "json"] }
 reqwest = { version = "0.11", features = ["stream", "rustls-tls"]}
-sea-orm = { version = "0.11.0", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "with-chrono", "with-uuid"] }
-
+sqlx = { version = "0.6.2", features = ["chrono", "json", "postgres", "runtime-tokio-rustls"] }
 
 
 # dev dependencies
