@@ -9,7 +9,7 @@ use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::Activity;
 use tracing::*;
 
-use crate::storage::kv::KVClient;
+use crate::storage::{kv::KVClient, db::setup, db};
 
 pub struct ServerData {
     pub kv_client: crate::storage::kv::KVClient,
@@ -22,6 +22,10 @@ async fn main() -> anyhow::Result<()> {
     event!(Level::DEBUG, "Reading configuration");
     // Load application config
     let config = config::DiscordConfig::from_env_and_file(".config/config.toml")?;
+
+    // Db Setup
+    event!(Level::DEBUG, "Database setup");
+    let db_pool = db::setup(config.database_url.as_ref()).await.with_context(|| "Error setting up database connection")?;
 
     // Client setup
     event!(Level::DEBUG, "Discord client setup");

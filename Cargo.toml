@@ -12,7 +12,6 @@ include = [
 
 [dependencies]
 poise = "0.5"
-tokio = { version = "1", features = ["default", "rt-multi-thread", "time"]}
 config = { version = "0.13", default-features = false, features = ["toml"] }
 anyhow = "1"
 serde = { version = "1", features = ["derive"]}
@@ -24,7 +23,14 @@ chrono-tz = "0.8"
 chrono-english = "0.1"
 redis = { version = "0.22", features = ["tokio-comp", "json"] }
 reqwest = { version = "0.11", features = ["stream", "rustls-tls"]}
-sqlx = { version = "0.6.2", features = ["chrono", "json", "postgres", "runtime-tokio-rustls"] }
+
+[dependencies.tokio]
+version = "1"
+features = ["default", "rt-multi-thread", "time"]
+
+[dependencies.sqlx]
+version = "0.6"
+features = ["chrono", "json", "postgres", "runtime-tokio-rustls", "migrate", "any", "offline"]
 
 
 # dev dependencies
