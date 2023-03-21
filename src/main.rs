@@ -25,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Db Setup
     event!(Level::DEBUG, "Database setup");
-    let db_pool = db::setup(config.database_url.as_ref()).await.with_context(|| "Error setting up database connection")?;
+    let _db_pool = db::setup(config.database_url.as_ref()).await.with_context(|| "Error setting up database connection")?;
 
     // Client setup
     event!(Level::DEBUG, "Discord client setup");
@@ -50,7 +50,7 @@ async fn main() -> anyhow::Result<()> {
                     .await
                     .with_context(|| "Error creating Discord client")?;
 
-                let kv_client = KVClient::new(&config)?;
+                let kv_client = KVClient::new(&config).with_context(|| "Error setting up KV client")?;
 
                 Ok(ServerData { kv_client })
             })
