@@ -8,6 +8,8 @@ use tracing::*;
 use crate::storage::kv::KVClient;
 use crate::storage::model::guild_timezone::GuildTimezone;
 use crate::ServerData;
+use crate::storage::model::reminder::Reminder;
+use crate::storage::db::Repository;
 
 pub type Context<'a> = poise::Context<'a, ServerData, anyhow::Error>;
 
@@ -92,7 +94,7 @@ async fn autocomplete_timezone<'a>(
     _ctx: Context<'_>,
     partial: &str,
 ) -> impl Iterator<Item = String> {
-    let timezones: Vec<String> = filter_timezones(partial).into_iter().collect();
+    let timezones: Vec<String> = filter_timezones(partial).collect();
     match timezones.len() {
         1..=100 => timezones.into_iter(),
         101.. => timezones.chunks(100).next().unwrap().to_vec().into_iter(),
@@ -136,7 +138,8 @@ pub async fn reminder(ctx: Context<'_>, when: String, what: String) -> Result<()
                 span.record("guild_timezone", field::debug(&guild_timezone));
                 event!(
                     Level::DEBUG,
-                    "Found specific timezone for guild {}",
+                    "Found specific timezone {:?} for guild {}",
+                    guild_timezone,
                     guild_id
                 );
 
@@ -159,8 +162,22 @@ pub async fn reminder(ctx: Context<'_>, when: String, what: String) -> Result<()
             "Parsed '{when}' into {parsed_datetime:#?}"
         );
 
+        let reminder = Reminder {
+            id: 0, // will be ignored on insert
+            server: ctx.guild_id().unwrap().0,
+            channel: ctx.channel_id().0,
+            who: ctx.author().id.0,
+            when: parsed_datetime.with_timezone(&Utc),
+            what: what.clone()
+        };
+
+        let repo = Reminder::repository(&ctx.data().db_pool);
+        let id = repo.insert(&reminder).await?;
+
+        event!(Level::TRACE, "Saved event with id {}", id);
+
         ctx.say(format!(
-            "Got it! I will remind you at {} to {}",
+            "Got it! I will remind you at {} about {}",
             parsed_datetime.format("%d/%m/%Y %H:%M"),
             what
         ))

@@ -7,12 +7,14 @@ use anyhow::{anyhow, Context};
 use discord::*;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::Activity;
+use sqlx::Pool;
 use tracing::*;
 
 use crate::storage::{kv::KVClient, db::setup, db};
 
 pub struct ServerData {
     pub kv_client: crate::storage::kv::KVClient,
+    pub db_pool: Pool<sqlx::Postgres>,
 }
 
 #[tokio::main]
@@ -25,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Db Setup
     event!(Level::DEBUG, "Database setup");
-    let _db_pool = db::setup(config.database_url.as_ref()).await.with_context(|| "Error setting up database connection")?;
+    let db_pool = db::setup(config.database_url.as_ref()).await.with_context(|| "Error setting up database connection")?;
 
     // Client setup
     event!(Level::DEBUG, "Discord client setup");
@@ -52,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
 
                 let kv_client = KVClient::new(&config).with_context(|| "Error setting up KV client")?;
 
-                Ok(ServerData { kv_client })
+                Ok(ServerData { kv_client, db_pool })
             })
         });
 

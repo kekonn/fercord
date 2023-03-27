@@ -1,4 +1,5 @@
-use sqlx::{Pool, Postgres};
+use poise::async_trait;
+use sqlx::{Pool, Postgres, Database};
 use tracing::{event, instrument, Level};
 use anyhow::{Result, Context};
 use sqlx::postgres::PgPoolOptions;
@@ -19,3 +20,15 @@ pub async fn setup(url: &str) -> Result<Pool<Postgres>> {
     Ok(pool)
 }
 
+pub struct Repo<'r, C>
+    where C: Database
+{
+    pub(crate) pool: &'r Pool<C>,
+}
+
+#[async_trait]
+/// Basic repository interface
+pub trait Repository<E, I> {
+    async fn insert(&self, entity: &E) -> Result<I>;
+    async fn delete(&self, entity: E) -> Result<()>;
+}
