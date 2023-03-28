@@ -22,6 +22,8 @@ pub struct DiscordConfig {
     pub database_url: String,
     /// Url to indicate the redis instance to use.
     pub redis_url: String,
+    /// Job interval in minutes
+    pub job_interval_min: u32,
 }
 
 const ENV_PREFIX: &str = "FERCORD";
@@ -103,7 +105,8 @@ mod tests {
         let expected = DiscordConfig {
             discord_token: "111".into(),
             database_url: "sqlite://:memory:".into(),
-            redis_url: "redis://localhost".into()
+            redis_url: "redis://localhost".into(),
+            job_interval_min: 1,
         };
 
         let config = DiscordConfig::from_file(".testdata/basic_config.toml").unwrap();
@@ -119,7 +122,8 @@ mod tests {
         let expected = DiscordConfig {
             discord_token: "222".into(),
             database_url: "sqlite://:memory:".into(),
-            redis_url: "redis://localhost".into()
+            redis_url: "redis://localhost".into(),
+            job_interval_min: 1,
         };
 
         // Act
