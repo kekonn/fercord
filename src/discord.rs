@@ -198,14 +198,11 @@ async fn get_guild_timezone(client: &KVClient, guild_id: &serenity::GuildId) -> 
 
     let guild_timezone = client.get_json(&kv_identity).await?;
 
-    if let Ok(timezone) = guild_timezone.timezone.parse::<Tz>() {
-        Ok(timezone)
-    } else {
-        Err(anyhow!(
-            "Error retrieving timezone for guild {}",
-            &guild_id.0
-        ))
+    if guild_timezone.is_none() {
+        return Ok(Tz::UTC);
     }
+
+    guild_timezone.unwrap().timezone.parse::<Tz>().map_err(|e| anyhow!(e))
 }
 
 fn parse_human_time<T>(when: impl Into<String>, tz: T) -> Result<DateTime<T>>

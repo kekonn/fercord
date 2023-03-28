@@ -20,6 +20,8 @@ pub type ReminderRepo<'r> = Repo<'r, Postgres>;
 
 #[async_trait]
 impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
+
+    /// Inserts a reminder into the database and returns the id of the inserted record upon success.
     async fn insert(&self, entity: &Reminder) -> Result<i64> {
         event!(Level::TRACE, "Adding or updating entity {:?}", entity);
         let db_ent = ReminderEntity::from(entity);
@@ -40,7 +42,8 @@ impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
         Ok(query.try_get(0)?)
     }
 
-    async fn delete (&self, entity: Reminder) -> Result<()> {
+    /// Deletes the given reminder from the database.
+    async fn delete(&self, entity: Reminder) -> Result<()> {
         event!(Level::TRACE, "Deleting entity {:?}", &entity);
 
         let trans = self.pool.begin().await?;
@@ -53,10 +56,23 @@ impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
 
         Ok(())
     }
+
+    /// Get a reminder by id.
+    async fn get(&self, id: i64) -> Result<Option<Reminder>> {
+        event!(Level::TRACE, "Retrieving Reminder with id {}", id);
+
+        if let Some(query) = sqlx::query_as::<Postgres, ReminderEntity>("SELECT * FROM public.reminders WHERE id = $1")
+                .bind(id).fetch_optional(self.pool).await.with_context(|| "Error getting Reminder with id")? {
+             Ok(Some(query.try_into().with_context(|| "Error converting entity to reminder")?))
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 impl Reminder {
 
+    /// Create a `Reminder` repository that connects to the database with the borrowed pool.
     pub fn repository(pool: &Pool<Postgres>) -> ReminderRepo {
         Repo { pool }
     }
@@ -76,5 +92,13 @@ struct ReminderEntity {
 impl From<&Reminder> for ReminderEntity {
     fn from(value: &Reminder) -> Self {
         Self { id: value.id, who: value.who.to_string(), when: value.when, what: value.what.clone(), server: value.server.to_string(), channel: value.channel.to_string() }
+    }
+}
+
+impl TryFrom<ReminderEntity> for Reminder {
+    type Error = anyhow::Error;
+
+    fn try_from(value: ReminderEntity) -> Result<Self> {
+        Ok(Self { id: value.id, who: value.who.parse()?, when: value.when, what: value.what, server: value.server.parse()?, channel: value.channel.parse()? })
     }
 }

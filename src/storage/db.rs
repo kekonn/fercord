@@ -9,7 +9,7 @@ use sqlx::postgres::PgPoolOptions;
 pub async fn setup(url: &str) -> Result<Pool<Postgres>> {
     event!(Level::DEBUG, "Connecting to the database");
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(2)
         .connect(url).await.with_context(|| "Error connecting to database")?;
 
     let migrations = sqlx::migrate!();
@@ -28,7 +28,10 @@ pub struct Repo<'r, C>
 
 #[async_trait]
 /// Basic repository interface
-pub trait Repository<E, I> {
+pub trait Repository<E, I> 
+    where I: Sized
+{
     async fn insert(&self, entity: &E) -> Result<I>;
     async fn delete(&self, entity: E) -> Result<()>;
+    async fn get(&self, id: I) -> Result<Option<E>>;
 }

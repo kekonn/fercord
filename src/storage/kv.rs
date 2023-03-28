@@ -98,7 +98,7 @@ impl KVClient {
     }
 
     /// Retrieve a complex record for the given key.
-    pub async fn get_json<T>(&self, record: &T) -> Result<T>
+    pub async fn get_json<T>(&self, record: &T) -> Result<Option<T>>
     where
         T: DeserializeOwned + Send + Sync + Debug + Identifiable,
     {
@@ -116,12 +116,16 @@ impl KVClient {
 
         let con = &mut self.client.get_async_connection().await?;
 
+        if !con.exists(&key).await? {
+            return Ok(None);
+        }
+
         let json: String = con.get(key).await?;
 
         let record = serde_json::from_str(json.as_str())?;
 
         span.record("record", field::debug(&record));
 
-        Ok(record)
+        Ok(Some(record))
     }
 }
