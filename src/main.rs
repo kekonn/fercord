@@ -9,6 +9,7 @@ use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::Activity;
 use sqlx::Pool;
 use tracing::*;
+use tokio_stream::StreamExt;
 
 use crate::{storage::{ kv::KVClient, db }, job::{Job, job_scheduler}};
 
@@ -76,5 +77,4 @@ async fn main() -> anyhow::Result<()> {
 
     let result = tokio::join!(discord_handle, scheduler);
     
-    result.0?
 }

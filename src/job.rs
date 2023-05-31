@@ -6,8 +6,9 @@ use anyhow::{ Result, Context };
 use chrono::{Utc, DateTime, Duration};
 use serde::{ Deserialize, Serialize };
 use sqlx::{ Pool };
-use tokio::time::sleep;
-use tracing::{ span, Level, event, field };
+use tokio::time::{Interval, interval};
+use tracing::{ span, Level, event, field, Span };
+use tokio_stream::{Stream, StreamExt};
 
 use crate::config::DiscordConfig;
 use crate::storage::kv::*;
@@ -17,6 +18,7 @@ pub type Job = dyn Fn(&Arc<JobArgs>) -> JobFuture;
 
 pub type JobFuture = Pin<Box<dyn Future<Output = Result<()>>>>;
 
+#[derive(Debug)]
 pub struct JobArgs {
     pub kv_client: KVClient,
     pub db_pool: Pool<sqlx::Postgres>,
@@ -51,17 +53,26 @@ impl Identifiable for JobState {
     }
 }
 
-pub async fn job_scheduler(
-    app_config: &DiscordConfig,
-    jobs: impl Iterator<Item = Box<Job>>
-) -> Result<()> {
+pub struct JobStream;
+
+impl Stream for JobStream {
+    type Item = JobFuture;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<Self::Item>> {
+        todo!()
+    }
+}
+
+/// Produces a stream that returns a job future at the configured interval.
+pub async fn run_jobs(app_config: &DiscordConfig, jobs: Vec<Box<Job>>) -> Result<()>
+{
     let span = span!(
         Level::DEBUG,
         "fercord.jobs.job_scheduler",
         job_interval = &app_config.job_interval_min,
         last_run_time = field::Empty,
         shard_key = field::Empty,
-        interval = field::Empty,
+        interval = field::display(app_config.job_interval_min),
         next_run = field::Empty,
         failed_jobs = field::Empty,
         completed_jobs = field::Empty,
@@ -71,6 +82,20 @@ pub async fn job_scheduler(
     let shard_key = uuid::Uuid::new_v4();
     span.record("shard_key", field::display(&shard_key));
 
+    let mut interval = interval(Duration::minutes(app_config.job_interval_min.into()).to_std()?);
+    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    
+
+    save_job_state(&shard_key, &arc_args.kv_client).await?;
+
+    Ok(())
+}
+
+async fn job_scheduler(
+    app_config: &DiscordConfig,
+    jobs: impl Iterator<Item = Box<Job>>
+) -> Result<()> {
+    let span = Span::current();
 
     event!(Level::DEBUG, "Setting up job scheduler db pool");
     let db_pool = db
@@ -95,15 +120,6 @@ pub async fn job_scheduler(
     let job_interval = Duration::minutes(app_config.job_interval_min.into());
     span.record("interval", field::display(&job_interval));
 
-    // sleep until next run
-    if since_last_run < job_interval {
-        let next_run = job_interval - since_last_run;
-        span.record("next_run", field::display(next_run));
-        event!(Level::INFO, "Still to early. Sleeping until next interval");
-
-        sleep((job_interval - since_last_run).to_std()?).await;
-    }
-
     let arc_args = Arc::new(job_args);
     let mut failed_jobs = 0;
     let mut completed_jobs = 0;
@@ -124,7 +140,6 @@ pub async fn job_scheduler(
     event!(Level::INFO, "All jobs in this run completed");
     span.record("failed_jobs", field::Empty);
     span.record("completed_jobs", field::Empty);
-    save_job_state(&shard_key, &arc_args.kv_client).await?;
 
     Ok(())
 }

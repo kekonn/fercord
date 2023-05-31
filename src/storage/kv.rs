@@ -15,6 +15,7 @@ pub type KVIdentity = String;
 ///
 /// ## Creation
 /// Create a new client by calling `KVClient::`
+#[derive(Debug)]
 pub struct KVClient {
     client: Client,
 }
