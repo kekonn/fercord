@@ -20,7 +20,7 @@ tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
 chrono = "0.4"
 chrono-tz = "0.8"
 chrono-english = "0.1"
-redis = { version = "0.22", features = ["tokio-comp", "json"] }
+redis = { version = "0.23", features = ["tokio-comp", "json"] }
 reqwest = { version = "0.11", features = ["stream", "rustls-tls"]}
 
 [dependencies.tokio]
