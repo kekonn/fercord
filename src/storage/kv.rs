@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use poise::async_trait;
 use redis::{AsyncCommands, Client, ToRedisArgs};
 use serde::{de::DeserializeOwned, Serialize};
 use std::{

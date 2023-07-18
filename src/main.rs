@@ -9,12 +9,11 @@ use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::Activity;
 use sqlx::Pool;
 use tracing::*;
-use tokio_stream::StreamExt;
 
-use crate::{storage::{ kv::KVClient, db }, job::{Job, job_scheduler}};
+use crate::{storage::{db, kv::KVClient}, job::{Job, job_scheduler}};
 
 pub struct ServerData {
-    pub kv_client: crate::storage::kv::KVClient,
+    pub kv_client: KVClient,
     pub db_pool: Pool<sqlx::Postgres>,
 }
 
@@ -34,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
 
     // KV Setup
     event!(Level::DEBUG, "Connecting to KV Store");
-    let kv_client = KVClient::new(&config).with_context(|| "Error setting up KV client")?;
+    let kv_client = KVClient::new(&config).with_context(|| "Error building redis client")?;
 
     // Discord setup
     event!(Level::DEBUG, "Discord client setup");
@@ -63,18 +62,29 @@ async fn main() -> anyhow::Result<()> {
             })
         });
 
+    // let discord run in it's own thread
     let discord_handle = tokio::spawn(async move {
         match framework.run_autosharded().await {
             Err(e) => Err(anyhow!(e)),
             Ok(_) => Ok(()),
         }
-    }).in_current_span();
+    });
 
+    // Set up background scheduling
     event!(Level::INFO, "Setting up background jobs");
     let jobs: Vec<Box<Job>> = Vec::new();
 
-    let scheduler = job_scheduler(&config, jobs.into_iter());
+    let (discord_result, scheduler_result) = tokio::join!(discord_handle, 
+        job_scheduler(&config, &jobs)
+    );
 
-    let result = tokio::join!(discord_handle, scheduler);
-    
+    if let Err(scheduler_err) = scheduler_result {
+        event!(Level::ERROR, "{:?}", &scheduler_err);
+    }
+
+    if let Err(discord_error) = discord_result {
+        event!(Level::ERROR, "{:?}", &discord_error);
+    }
+
+    Ok(())    
 }

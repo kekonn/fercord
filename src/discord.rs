@@ -105,7 +105,7 @@ async fn autocomplete_timezone<'a>(
     }
 }
 
-fn filter_timezones<'a>(pattern: &'a str) -> impl Iterator<Item = String> + 'a {
+fn filter_timezones(pattern: &str) -> impl Iterator<Item = String> + '_ {
     TZ_VARIANTS
         .iter()
         .filter_map(move |tz| tz.name().find(pattern).map(|_| tz.name()))
