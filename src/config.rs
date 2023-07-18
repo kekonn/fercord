@@ -8,14 +8,33 @@
 //! ```
 
 use anyhow::{Context, Result};
+use tracing::{event, Level};
 
 /// The application configuration.
 ///
 /// You can use [from_env()](#from_env) or [from_env_and_file(path: &str)](#from_end_and_path) to create a configuration.
-#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+/// 
+/// Settings:
+/// * `discord_token`: `String`
+/// * `database_url`: `String`
+/// * `redis_url`: `String`
+/// * `job_interval_min`: `u32`
+#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq, Clone)]
 pub struct DiscordConfig {
     /// The Discord API token.
     pub discord_token: String,
+    /// The url for the database.
+    ///
+    /// Usual format: `postgres://usernane:pw@server/db`
+    pub database_url: String,
+    /// Url to indicate the redis instance to use.
+    pub redis_url: String,
+    /// Job interval in minutes
+    pub job_interval_min: u32,
+    /// The unique shard key that defines this bot server.
+    /// 
+    /// Used when multiple servers share the same key-value store.
+    pub shard_key: uuid::Uuid,
 }
 
 const ENV_PREFIX: &str = "FERCORD";
@@ -47,6 +66,8 @@ impl DiscordConfig {
     #[allow(dead_code)]
     #[tracing::instrument]
     pub fn from_env_and_file(path: &str) -> Result<Self> {
+        event!(Level::DEBUG, "Building configuration from environment and file {}", path);
+        
         let builder = config::Config::builder()
             .add_source(config::File::with_name(path))
             .add_source(config::Environment::with_prefix(ENV_PREFIX));
@@ -61,7 +82,7 @@ impl DiscordConfig {
     }
 
     /// Create a configuration from the given file.
-    /// 
+    ///
     /// Only here to test the file loading without environment influence.
     #[cfg(test)]
     fn from_file(path: &str) -> Result<Self> {
@@ -96,6 +117,10 @@ mod tests {
     fn can_deserialize_toml() {
         let expected = DiscordConfig {
             discord_token: "111".into(),
+            database_url: "sqlite://:memory:".into(),
+            redis_url: "redis://localhost".into(),
+            job_interval_min: 1,
+            shard_key: uuid::uuid!("c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"),
         };
 
         let config = DiscordConfig::from_file(".testdata/basic_config.toml").unwrap();
@@ -110,6 +135,10 @@ mod tests {
 
         let expected = DiscordConfig {
             discord_token: "222".into(),
+            database_url: "sqlite://:memory:".into(),
+            redis_url: "redis://localhost".into(),
+            job_interval_min: 1,
+            shard_key: uuid::uuid!("c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"),
         };
 
         // Act
