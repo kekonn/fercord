@@ -1,17 +1,12 @@
-use anyhow::{anyhow, Result};
-use chrono::prelude::*;
-use chrono_english::*;
-use chrono_tz::{Tz, TZ_VARIANTS};
+
+use anyhow::{ Result, anyhow };
+use chrono::{DateTime, TimeZone, Utc};
+use chrono_english::{Dialect, parse_date_string};
+use tracing::{ trace_span, event, Level, field, debug, warn };
+use chrono_tz::{ Tz, TZ_VARIANTS };
 use poise::serenity_prelude as serenity;
-use tracing::*;
 
-use crate::storage::kv::KVClient;
-use crate::storage::model::guild_timezone::GuildTimezone;
-use crate::ServerData;
-use crate::storage::model::reminder::Reminder;
-use crate::storage::db::Repository;
-
-pub type Context<'a> = poise::Context<'a, ServerData, anyhow::Error>;
+use crate::{discord::Context, storage::{model::{guild_timezone::GuildTimezone, reminder::Reminder}, kv::KVClient, db::Repository}};
 
 const FROM_NOW: &str = "from now";
 
@@ -89,28 +84,6 @@ pub async fn timezone(
     }
 }
 
-/// Autocomplete renderer for the timezones list.
-async fn autocomplete_timezone<'a>(
-    _ctx: Context<'_>,
-    partial: &str,
-) -> impl Iterator<Item = String> {
-    let timezones: Vec<String> = filter_timezones(partial).collect();
-    match timezones.len() {
-        1..=100 => timezones.into_iter(),
-        101.. => timezones.chunks(100).next().unwrap().to_vec().into_iter(),
-        _ => vec![String::from(
-            "Please type the first 3 characters of your timezone to start a search",
-        )]
-        .into_iter(),
-    }
-}
-
-fn filter_timezones(pattern: &str) -> impl Iterator<Item = String> + '_ {
-    TZ_VARIANTS
-        .iter()
-        .filter_map(move |tz| tz.name().find(pattern).map(|_| tz.name()))
-        .map(|tz| tz.to_string())
-}
 
 /// Create a reminder
 ///
@@ -205,7 +178,7 @@ async fn get_guild_timezone(client: &KVClient, guild_id: &serenity::GuildId) -> 
     guild_timezone.unwrap().timezone.parse::<Tz>().map_err(|e| anyhow!(e))
 }
 
-fn parse_human_time<T>(when: impl Into<String>, tz: T) -> Result<DateTime<T>>
+pub(crate) fn parse_human_time<T>(when: impl Into<String>, tz: T) -> Result<DateTime<T>>
 where
     T: TimeZone,
 {
@@ -244,7 +217,7 @@ where
 }
 
 #[tracing::instrument]
-fn clean_input(natural_input: String) -> String {
+pub(crate) fn clean_input(natural_input: String) -> String {
     let mut pre_clean = natural_input.trim().to_lowercase();
 
     if pre_clean.starts_with("in") {
@@ -260,60 +233,26 @@ fn clean_input(natural_input: String) -> String {
     pre_clean.trim().to_string()
 }
 
-#[cfg(test)]
-mod parse_tests {
-    use super::*;
-    use tracing_test::traced_test;
 
-    /// `"5 minutes"`
-    const EXPECTED: &str = "5 minutes";
-
-    #[traced_test]
-    #[test]
-    fn parsed_moment_is_future() {
-        // Arrange
-        let input = "in 5 minutes";
-        let now = Utc::now();
-
-        // Act
-        let parsed = super::parse_human_time(input, Utc);
-
-        // Assert
-        debug_assert!(parsed.is_ok(), "We did not get a successful parse");
-        let unwrapped = parsed.unwrap();
-        assert!(
-            unwrapped > now,
-            "Parsed time appears to be in the past: unwrapped={unwrapped} now={now}"
-        );
-
-        let difference = unwrapped - now;
-        assert_eq!(difference.num_minutes(), 5);
+/// Autocomplete renderer for the timezones list.
+async fn autocomplete_timezone<'a>(
+    _ctx: Context<'_>,
+    partial: &str,
+) -> impl Iterator<Item = String> {
+    let timezones: Vec<String> = filter_timezones(partial).collect();
+    match timezones.len() {
+        1..=100 => timezones.into_iter(),
+        101.. => timezones.chunks(100).next().unwrap().to_vec().into_iter(),
+        _ => vec![String::from(
+            "Please type the first 3 characters of your timezone to start a search",
+        )]
+        .into_iter(),
     }
+}
 
-    #[test]
-    fn clean_input_cleans_in_syntax() {
-        let input = "in 5 minutes";
-
-        let result = super::clean_input(input.into());
-
-        assert_eq!(EXPECTED, result);
-    }
-
-    #[test]
-    fn clean_input_cleans_from_syntax() {
-        let input = "5 minutes from now";
-
-        let result = super::clean_input(input.into());
-
-        assert_eq!(EXPECTED, result);
-    }
-
-    #[test]
-    fn clean_input_cleans_combined_syntax() {
-        let input = "in 5 minutes from now";
-
-        let result = super::clean_input(input.into());
-
-        assert_eq!(EXPECTED, result);
-    }
+fn filter_timezones(pattern: &str) -> impl Iterator<Item = String> + '_ {
+    TZ_VARIANTS
+        .iter()
+        .filter_map(move |tz| tz.name().find(pattern).map(|_| tz.name()))
+        .map(|tz| tz.to_string())
 }

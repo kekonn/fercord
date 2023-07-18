@@ -3,12 +3,10 @@ use std::sync::Arc;
 use std::future::Future;
 
 use anyhow::{ Result, Context };
-use chrono::{Utc, DateTime, Duration};
+use chrono::{ Utc, DateTime, Duration };
 use serde::{ Deserialize, Serialize };
 use sqlx::Pool;
-use tracing::info;
-use tracing::{ span, event, field, debug_span, Level };
-use tokio_stream::Stream;
+use tracing::{ span, info, event, field, debug_span, Level };
 
 use crate::config::DiscordConfig;
 use crate::storage::kv::*;
@@ -53,22 +51,12 @@ impl Identifiable for JobState {
     }
 }
 
-pub struct JobStream;
-
-impl Stream for JobStream {
-    type Item = JobFuture;
-
-    fn poll_next(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<Self::Item>> {
-        todo!()
-    }
-}
-
 pub async fn job_scheduler(
     app_config: &DiscordConfig,
-    jobs: &Vec<Box<Job>>
+    jobs: &Vec<Box<Job>>,
+    shard_key: &uuid::Uuid,
 ) -> Result<()> {
-    let shard_key = uuid::Uuid::new_v4();
-    let span = debug_span!("fercord.jobs.scheduler", last_run_time = field::Empty, interval = field::Empty, failed_jobs = 0, completed_jobs = 0, job_count = field::display(&jobs.len()));
+    let span = debug_span!("fercord.jobs.scheduler", last_run_time = field::Empty, interval_mins = &app_config.job_interval_min, failed_jobs = 0, completed_jobs = 0, job_count = field::display(&jobs.len()), shard_key = field::display(&shard_key));
     let _enter = span.enter();
 
     if jobs.is_empty() {
@@ -77,50 +65,57 @@ pub async fn job_scheduler(
     }
 
     event!(Level::DEBUG, "Setting up job scheduler db pool");
-    let db_pool = db
+    let db_pool = {
+        let pool = db
         ::setup(app_config.database_url.as_ref()).await
         .with_context(|| "Error setting up database connection")?;
-    let db_pool = Arc::new(db_pool);
+
+        Arc::new(pool)
+    };
 
     event!(Level::DEBUG, "Setting up job scheduler KV client");
     let kv_client = Arc::new(KVClient::new(app_config).with_context(|| "Error setting up KV client")?);
 
     let job_args = Arc::new(JobArgs::new(&kv_client, &db_pool));
 
-    // get last run time and compare to interval, sleep for difference or run immediately
-    event!(Level::TRACE, "Retrieving last run state");
-    let last_job_state = get_last_runtime(&shard_key, &job_args.kv_client).await?;
+    let interval_dur = std::time::Duration::from_secs((app_config.job_interval_min * 60) as u64);
+    let mut job_interval = tokio::time::interval_at(tokio::time::Instant::now(), interval_dur);
+    job_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
-    let last_time_ran = last_job_state.map_or(DateTime::<Utc>::MIN_UTC, |s| s.last_run);
-    span.record("last_run_time", field::display(&last_time_ran));
+    loop {
+         // get last run time and compare to interval, sleep for difference or run immediately
+        event!(Level::TRACE, "Retrieving last run state");
+        let last_job_state = get_last_runtime(&shard_key, &job_args.kv_client).await?;
 
-    let since_last_run = Utc::now() - last_time_ran;
-    event!(Level::INFO, "Time since last run: {:?}", &since_last_run);
+        let last_time_ran = last_job_state.map_or(DateTime::<Utc>::MIN_UTC, |s| s.last_run);
+        span.record("last_run_time", field::display(&last_time_ran));
 
-    let job_interval = Duration::minutes(app_config.job_interval_min.into());
-    span.record("interval", field::display(&job_interval));
+        let since_last_run = Utc::now() - last_time_ran;
+        event!(Level::INFO, "Time since last run: {:?} min.", &since_last_run.num_minutes());
 
-    let mut failed_jobs = 0;
-    let mut completed_jobs = 0;
+        let mut failed_jobs = 0;
+        let mut completed_jobs = 0;
 
-    for job in jobs {
+        for job in jobs {
 
-        if let Err(e) = job(&job_args).await {
-            event!(Level::ERROR, "Encountered an error during a background job: {:?}", e);
-            failed_jobs += 1;
-        } else {
-            completed_jobs += 1;
+            if let Err(e) = job(&job_args).await {
+                event!(Level::ERROR, "Encountered an error during a background job: {:?}", e);
+                failed_jobs += 1;
+            } else {
+                completed_jobs += 1;
+            }
+    
+            span.record("failed_jobs", field::display(&failed_jobs));
+            span.record("completed_jobs", field::display(&completed_jobs));
         }
+    
+        info!("Attempted all jobs in this run");
+    
+        save_job_state(shard_key, &job_args.kv_client).await?;
 
-        span.record("failed_jobs", field::display(&failed_jobs));
-        span.record("completed_jobs", field::display(&completed_jobs));
+        info!("Sleeping until next interval");
+        _ = job_interval.tick().await;
     }
-
-    info!("Attempted all jobs in this run");
-
-    save_job_state(&shard_key, &job_args.kv_client).await?;
-
-    Ok(())
 }
 
 /// Save the job state for the given shard key and using the given KVClient.

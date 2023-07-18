@@ -3,14 +3,16 @@ mod discord;
 mod storage;
 mod job;
 
-use anyhow::{ anyhow, Context };
-use discord::*;
+use std::sync::Arc;
+
+use anyhow::Context;
+use discord::commands::{timezone, zuigt_ge_nog, reminder};
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::Activity;
 use sqlx::Pool;
 use tracing::*;
 
-use crate::{storage::{db, kv::KVClient}, job::{Job, job_scheduler}};
+use crate::{storage::{db, kv::KVClient}, job::{Job, job_scheduler, JobArgs, JobFuture}};
 
 pub struct ServerData {
     pub kv_client: KVClient,
@@ -62,20 +64,15 @@ async fn main() -> anyhow::Result<()> {
             })
         });
 
-    // let discord run in it's own thread
-    let discord_handle = tokio::spawn(async move {
-        match framework.run_autosharded().await {
-            Err(e) => Err(anyhow!(e)),
-            Ok(_) => Ok(()),
-        }
-    });
-
     // Set up background scheduling
     event!(Level::INFO, "Setting up background jobs");
-    let jobs: Vec<Box<Job>> = Vec::new();
+    let shard_key = uuid::Uuid::new_v4();
+    info!(%shard_key);
 
-    let (discord_result, scheduler_result) = tokio::join!(discord_handle, 
-        job_scheduler(&config, &jobs)
+    let jobs: Vec<Box<Job>> = vec![];
+
+    let (discord_result, scheduler_result) = tokio::join!(framework.run_autosharded(), 
+        job_scheduler(&config, &jobs, &shard_key)
     );
 
     if let Err(scheduler_err) = scheduler_result {
