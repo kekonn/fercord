@@ -31,6 +31,10 @@ pub struct DiscordConfig {
     pub redis_url: String,
     /// Job interval in minutes
     pub job_interval_min: u32,
+    /// The unique shard key that defines this bot server.
+    /// 
+    /// Used when multiple servers share the same key-value store.
+    pub shard_key: uuid::Uuid,
 }
 
 const ENV_PREFIX: &str = "FERCORD";
@@ -116,6 +120,7 @@ mod tests {
             database_url: "sqlite://:memory:".into(),
             redis_url: "redis://localhost".into(),
             job_interval_min: 1,
+            shard_key: uuid::uuid!("c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"),
         };
 
         let config = DiscordConfig::from_file(".testdata/basic_config.toml").unwrap();
@@ -133,6 +138,7 @@ mod tests {
             database_url: "sqlite://:memory:".into(),
             redis_url: "redis://localhost".into(),
             job_interval_min: 1,
+            shard_key: uuid::uuid!("c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"),
         };
 
         // Act

@@ -2,3 +2,4 @@ discord_token = "111"
 database_url = "sqlite://:memory:"
 redis_url = "redis://localhost"
 job_interval_min = 1
+shard_key = "c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"
