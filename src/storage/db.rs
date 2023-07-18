@@ -35,3 +35,4 @@ pub trait Repository<E, I>
     async fn delete(&self, entity: E) -> Result<()>;
     async fn get(&self, id: I) -> Result<Option<E>>;
 }
+

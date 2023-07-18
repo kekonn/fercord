@@ -2,7 +2,7 @@ use crate::storage::db::{Repo, Repository};
 
 use chrono::{DateTime, Utc};
 use poise::async_trait;
-use sqlx::{Postgres, Row, Pool};
+use sqlx::{Postgres, Row, Pool, FromRow};
 use anyhow::{Result, Context};
 use tracing::{event, Level};
 
@@ -17,6 +17,28 @@ pub struct Reminder {
 }
 
 pub type ReminderRepo<'r> = Repo<'r, Postgres>;
+
+impl<'r> ReminderRepo<'r> {
+
+    /// Get all reminders between the given moment and now.
+    pub async fn get_reminders_since(&self, moment: &DateTime<Utc>) -> Result<Vec<Reminder>> {
+        let now = Utc::now();
+        event!(Level::TRACE, "Getting all reminders between {} and {}", &moment, &now);
+
+        let query = sqlx::query(r#"SELECT who, "when", what, "server", channel
+        FROM public.reminders
+        WHERE "when" between $1 and $2
+        "#)
+            .bind(moment)
+            .bind(now)
+            .fetch_all(self.pool).await?;
+
+        let reminders = query.iter().map(|r| ReminderEntity::from_row(r).map_or(None, |r| Some(r)))
+            .filter_map(|o| o.map_or(None, |f| Reminder::try_from(f).map_or(None, |f| Some(f))));
+
+        Ok(reminders.collect())
+    }
+}
 
 #[async_trait]
 impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {

@@ -1,9 +1,8 @@
-use std::pin::Pin;
 use std::sync::Arc;
-use std::future::Future;
 
 use anyhow::{ Result, Context };
-use chrono::{ Utc, DateTime, Duration };
+use chrono::{ Utc, DateTime };
+use poise::async_trait;
 use serde::{ Deserialize, Serialize };
 use sqlx::Pool;
 use tracing::{ span, info, event, field, debug_span, Level };
@@ -12,20 +11,26 @@ use crate::config::DiscordConfig;
 use crate::storage::kv::*;
 use crate::storage::db;
 
-pub type Job = dyn Fn(&Arc<JobArgs>) -> JobFuture;
+//pub type Job = Box<dyn Fn(&Arc<JobArgs>) -> JobResult>;
+pub(crate) type JobResult = anyhow::Result<()>;
 
-pub type JobFuture = Pin<Box<dyn Future<Output = Result<()>>>>;
+#[async_trait]
+pub(crate) trait Job {
+
+    async fn run(&self, args: &Arc<JobArgs>) -> JobResult;
+}
 
 #[derive(Debug)]
 pub struct JobArgs {
     pub kv_client: Arc<KVClient>,
     pub db_pool: Arc<Pool<sqlx::Postgres>>,
+    pub last_run_time: DateTime<Utc>,
 }
 
 impl JobArgs {
     /// Create a new JobArgs struct from a `KVClient` and an sqlx Postgres pool.
-    fn new(kv_client: &Arc<KVClient>, db_pool: &Arc<Pool<sqlx::Postgres>>) -> Self {
-        Self { kv_client: kv_client.clone(), db_pool: db_pool.clone() }
+    fn new(kv_client: &Arc<KVClient>, db_pool: &Arc<Pool<sqlx::Postgres>>, last_run_time: DateTime<Utc>) -> Self {
+        Self { kv_client: kv_client.clone(), db_pool: db_pool.clone(), last_run_time }
     }
 }
 
@@ -51,9 +56,9 @@ impl Identifiable for JobState {
     }
 }
 
-pub async fn job_scheduler(
+pub(crate) async fn job_scheduler(
     app_config: &DiscordConfig,
-    jobs: &Vec<Box<Job>>,
+    jobs: &Vec<Box<dyn Job>>,
     shard_key: &uuid::Uuid,
 ) -> Result<()> {
     let span = debug_span!("fercord.jobs.scheduler", last_run_time = field::Empty, interval_mins = &app_config.job_interval_min, failed_jobs = 0, completed_jobs = 0, job_count = field::display(&jobs.len()), shard_key = field::display(&shard_key));
@@ -76,8 +81,6 @@ pub async fn job_scheduler(
     event!(Level::DEBUG, "Setting up job scheduler KV client");
     let kv_client = Arc::new(KVClient::new(app_config).with_context(|| "Error setting up KV client")?);
 
-    let job_args = Arc::new(JobArgs::new(&kv_client, &db_pool));
-
     let interval_dur = std::time::Duration::from_secs((app_config.job_interval_min * 60) as u64);
     let mut job_interval = tokio::time::interval_at(tokio::time::Instant::now(), interval_dur);
     job_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -85,7 +88,7 @@ pub async fn job_scheduler(
     loop {
          // get last run time and compare to interval, sleep for difference or run immediately
         event!(Level::TRACE, "Retrieving last run state");
-        let last_job_state = get_last_runtime(&shard_key, &job_args.kv_client).await?;
+        let last_job_state = get_last_runtime(shard_key, &kv_client).await?;
 
         let last_time_ran = last_job_state.map_or(DateTime::<Utc>::MIN_UTC, |s| s.last_run);
         span.record("last_run_time", field::display(&last_time_ran));
@@ -98,7 +101,9 @@ pub async fn job_scheduler(
 
         for job in jobs {
 
-            if let Err(e) = job(&job_args).await {
+            let job_args = Arc::new(JobArgs::new(&kv_client, &db_pool, last_time_ran));
+            
+            if let Err(e) = job.run(&job_args).await {
                 event!(Level::ERROR, "Encountered an error during a background job: {:?}", e);
                 failed_jobs += 1;
             } else {
@@ -111,7 +116,7 @@ pub async fn job_scheduler(
     
         info!("Attempted all jobs in this run");
     
-        save_job_state(shard_key, &job_args.kv_client).await?;
+        save_job_state(shard_key, &kv_client).await?;
 
         info!("Sleeping until next interval");
         _ = job_interval.tick().await;
