@@ -6,7 +6,7 @@ use poise::async_trait;
 use poise::serenity_prelude as serenity;
 use serde::{ Deserialize, Serialize };
 use sqlx::Pool;
-use tracing::{ span, info, event, field, debug_span, Level };
+use tracing::{ info, event, field, debug_span, Level };
 
 use crate::config::DiscordConfig;
 use crate::storage::kv::*;
@@ -63,7 +63,7 @@ pub(crate) async fn job_scheduler(
     shard_key: &uuid::Uuid,
     discord_client: &Arc<serenity::CacheAndHttp>,
 ) -> Result<()> {
-    let span = debug_span!("fercord.jobs.scheduler", last_run_time = field::Empty, interval_mins = &app_config.job_interval_min, failed_jobs = 0, completed_jobs = 0, job_count = field::display(&jobs.len()), shard_key = field::display(&shard_key));
+    let span = debug_span!("fercord.jobs.scheduler", shard_key = field::display(&shard_key));
     let _enter = span.enter();
 
     if jobs.is_empty() {
@@ -92,18 +92,17 @@ pub(crate) async fn job_scheduler(
         event!(Level::TRACE, "Retrieving last run state");
         let last_job_state = get_last_runtime(shard_key, &kv_client).await?;
 
-        let last_time_ran = last_job_state.map_or(DateTime::<Utc>::MIN_UTC, |s| s.last_run);
-        span.record("last_run_time", field::display(&last_time_ran));
+        let last_time_ran = last_job_state.map_or(Utc::now(), |s| s.last_run);
 
         let since_last_run = Utc::now() - last_time_ran;
-        event!(Level::INFO, "Time since last run: {:?} min.", &since_last_run.num_minutes());
+        event!(Level::INFO, "Time since last run: {:?} s", &since_last_run.num_seconds());
 
         let mut failed_jobs = 0;
         let mut completed_jobs = 0;
 
         for job in jobs {
 
-            let job_args = Arc::new(JobArgs::new(&kv_client, &db_pool, last_time_ran, &discord_client));
+            let job_args = Arc::new(JobArgs::new(&kv_client, &db_pool, last_time_ran, discord_client));
             
             if let Err(e) = job.run(&job_args).await {
                 event!(Level::ERROR, "Encountered an error during a background job: {:?}", e);
@@ -111,12 +110,9 @@ pub(crate) async fn job_scheduler(
             } else {
                 completed_jobs += 1;
             }
-    
-            span.record("failed_jobs", field::display(&failed_jobs));
-            span.record("completed_jobs", field::display(&completed_jobs));
         }
     
-        info!("Attempted all jobs in this run");
+        info!("Attempted all jobs in this run. Completed: {} - Failed: {}", &completed_jobs, &failed_jobs);
     
         save_job_state(shard_key, &kv_client).await?;
 
@@ -127,9 +123,6 @@ pub(crate) async fn job_scheduler(
 
 /// Save the job state for the given shard key and using the given KVClient.
 async fn save_job_state(shard_key: &uuid::Uuid, kv_client: &Arc<KVClient>) -> Result<()> {
-    let span = span!(Level::DEBUG, "fercord.jobs.save_state", shard_key = field::display(shard_key));
-    let _enter = span.enter();
-
     let state = JobState::new(shard_key, Utc::now());
     event!(Level::DEBUG, "Saving completed run at {}", field::display(&state.last_run));
 
@@ -146,9 +139,6 @@ async fn get_last_runtime(
     job_shard_key: &uuid::Uuid,
     kv_client: &Arc<KVClient>
 ) -> Result<Option<JobState>> {
-    let span = span!(Level::TRACE, "fercord.jobs", job_shard_key = field::display(&job_shard_key));
-    let _enter = span.enter();
-
     let state_ident = JobState::for_identity(job_shard_key);
     let state_json = kv_client
         .get_json::<JobState>(&state_ident).await

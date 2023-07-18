@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use poise::async_trait;
 use sqlx::{Postgres, Row, Pool, FromRow};
 use anyhow::{Result, Context};
-use tracing::{event, Level};
+use tracing::{event, Level, trace};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Reminder {
@@ -25,18 +25,22 @@ impl<'r> ReminderRepo<'r> {
         let now = Utc::now();
         event!(Level::TRACE, "Getting all reminders between {} and {}", &moment, &now);
 
-        let query = sqlx::query(r#"SELECT who, "when", what, "server", channel
+        let query = sqlx::query(r#"SELECT *
         FROM public.reminders
-        WHERE "when" between $1 and $2
+        WHERE "when" >= $1 and "when" < $2
         "#)
             .bind(moment)
             .bind(now)
             .fetch_all(self.pool).await?;
 
-        let reminders = query.iter().map(|r| ReminderEntity::from_row(r).map_or(None, |r| Some(r)))
-            .filter_map(|o| o.map_or(None, |f| Reminder::try_from(f).map_or(None, |f| Some(f))));
+        trace!("Found {} reminders", query.len());
 
-        Ok(reminders.collect())
+        let reminders: Vec<Reminder> = query.iter().map(|r| ReminderEntity::from_row(r).ok())
+            .filter_map(|o| o.and_then(|f| Reminder::try_from(f).ok())).collect();
+
+        trace!("{} records remaining after mapping", reminders.len());
+
+        Ok(reminders)
     }
 }
 
