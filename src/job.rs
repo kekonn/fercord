@@ -3,6 +3,7 @@ use std::sync::Arc;
 use anyhow::{ Result, Context };
 use chrono::{ Utc, DateTime };
 use poise::async_trait;
+use poise::serenity_prelude as serenity;
 use serde::{ Deserialize, Serialize };
 use sqlx::Pool;
 use tracing::{ span, info, event, field, debug_span, Level };
@@ -15,22 +16,22 @@ use crate::storage::db;
 pub(crate) type JobResult = anyhow::Result<()>;
 
 #[async_trait]
-pub(crate) trait Job {
+pub trait Job {
 
     async fn run(&self, args: &Arc<JobArgs>) -> JobResult;
 }
 
-#[derive(Debug)]
 pub struct JobArgs {
     pub kv_client: Arc<KVClient>,
     pub db_pool: Arc<Pool<sqlx::Postgres>>,
     pub last_run_time: DateTime<Utc>,
+    pub discord_client: Arc<serenity::CacheAndHttp>,
 }
 
 impl JobArgs {
     /// Create a new JobArgs struct from a `KVClient` and an sqlx Postgres pool.
-    fn new(kv_client: &Arc<KVClient>, db_pool: &Arc<Pool<sqlx::Postgres>>, last_run_time: DateTime<Utc>) -> Self {
-        Self { kv_client: kv_client.clone(), db_pool: db_pool.clone(), last_run_time }
+    fn new(kv_client: &Arc<KVClient>, db_pool: &Arc<Pool<sqlx::Postgres>>, last_run_time: DateTime<Utc>, discord_client: &Arc<serenity::CacheAndHttp>) -> Self {
+        Self { kv_client: kv_client.clone(), db_pool: db_pool.clone(), last_run_time, discord_client: discord_client.clone() }
     }
 }
 
@@ -60,6 +61,7 @@ pub(crate) async fn job_scheduler(
     app_config: &DiscordConfig,
     jobs: &Vec<Box<dyn Job>>,
     shard_key: &uuid::Uuid,
+    discord_client: &Arc<serenity::CacheAndHttp>,
 ) -> Result<()> {
     let span = debug_span!("fercord.jobs.scheduler", last_run_time = field::Empty, interval_mins = &app_config.job_interval_min, failed_jobs = 0, completed_jobs = 0, job_count = field::display(&jobs.len()), shard_key = field::display(&shard_key));
     let _enter = span.enter();
@@ -101,7 +103,7 @@ pub(crate) async fn job_scheduler(
 
         for job in jobs {
 
-            let job_args = Arc::new(JobArgs::new(&kv_client, &db_pool, last_time_ran));
+            let job_args = Arc::new(JobArgs::new(&kv_client, &db_pool, last_time_ran, &discord_client));
             
             if let Err(e) = job.run(&job_args).await {
                 event!(Level::ERROR, "Encountered an error during a background job: {:?}", e);

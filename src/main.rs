@@ -60,17 +60,20 @@ async fn main() -> anyhow::Result<()> {
 
                 Ok(ServerData { kv_client, db_pool })
             })
-        });
+        })
+        .build().await?;
 
     // Set up background scheduling
     event!(Level::INFO, "Setting up background jobs");
     let shard_key = uuid::Uuid::new_v4();
     info!(%shard_key);
 
-    let jobs: Vec<Box<dyn Job>> = vec![];
+    let jobs: Vec<Box<dyn Job>> = vec![discord::jobs::reminders()];
+    let discord_client = framework.client().cache_and_http.clone();
 
-    let (discord_result, scheduler_result) = tokio::join!(framework.run_autosharded(), 
-        job_scheduler(&config, &jobs, &shard_key)
+    let (discord_result, scheduler_result) = tokio::join!(
+        framework.start_autosharded(), 
+        job_scheduler(&config, &jobs, &shard_key, &discord_client)
     );
 
     if let Err(scheduler_err) = scheduler_result {
