@@ -6,7 +6,8 @@ use anyhow::{ Result, Context };
 use chrono::{Utc, DateTime, Duration};
 use serde::{ Deserialize, Serialize };
 use sqlx::Pool;
-use tracing::{ span, event, field, Span, Level };
+use tracing::info;
+use tracing::{ span, event, field, debug_span, Level };
 use tokio_stream::Stream;
 
 use crate::config::DiscordConfig;
@@ -66,7 +67,14 @@ pub async fn job_scheduler(
     app_config: &DiscordConfig,
     jobs: &Vec<Box<Job>>
 ) -> Result<()> {
-    let span = Span::current();
+    let shard_key = uuid::Uuid::new_v4();
+    let span = debug_span!("fercord.jobs.scheduler", last_run_time = field::Empty, interval = field::Empty, failed_jobs = 0, completed_jobs = 0, job_count = field::display(&jobs.len()));
+    let _enter = span.enter();
+
+    if jobs.is_empty() {
+        info!("Job queue is empty. Skipping...");
+        return Ok(());
+    }
 
     event!(Level::DEBUG, "Setting up job scheduler db pool");
     let db_pool = db
@@ -79,7 +87,6 @@ pub async fn job_scheduler(
 
     let job_args = Arc::new(JobArgs::new(&kv_client, &db_pool));
 
-    let shard_key = uuid::Uuid::new_v4();
     // get last run time and compare to interval, sleep for difference or run immediately
     event!(Level::TRACE, "Retrieving last run state");
     let last_job_state = get_last_runtime(&shard_key, &job_args.kv_client).await?;
@@ -109,7 +116,7 @@ pub async fn job_scheduler(
         span.record("completed_jobs", field::display(&completed_jobs));
     }
 
-    event!(Level::INFO, "All jobs in this run attemted");
+    info!("Attempted all jobs in this run");
 
     save_job_state(&shard_key, &job_args.kv_client).await?;
 
