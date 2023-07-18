@@ -1,5 +1,6 @@
 [package]
 name = "fercord"
+description = "A Discord bot written in Rust."
 version = "0.1.0"
 edition = "2021"
 include = [
