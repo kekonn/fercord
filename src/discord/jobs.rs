@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use anyhow::Context;
 use poise::async_trait;
 use tracing::{ event, Level, debug_span, field };
 use poise::serenity_prelude as serenity;
@@ -29,16 +28,14 @@ impl Job for RemindersJob {
             span.record("reminder_id", field::display(reminder.id));
 
             let typing = discord_client.start_typing(reminder.channel)?;
+            let user = discord_client.get_user(reminder.who).await?;
             
             let channel = serenity::ChannelId(reminder.channel);
-            channel.send_message(&discord_client, |m| {
-                m.add_embed(|e| {
-                    e
-                        .title("Reminder")
-                        .description(reminder.what)
-                        .timestamp(reminder.when)
-                })
-            }).await?;
+            if let Err(error) = channel.send_message(&discord_client, |m| {
+                m.content(format!("{} I was supposed to remind you of {}", serenity::Mention::from(user.id), reminder.what))
+            }).await {
+                event!(Level::ERROR, %error, "Error sending reminder {}", &reminder.id);
+            }
 
             typing.stop();
         }
