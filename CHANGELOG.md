@@ -5,6 +5,7 @@
 ## [Unreleased] - ReleaseDate
 
 ### Added
+- Docker support
 
 ### Changed
 
