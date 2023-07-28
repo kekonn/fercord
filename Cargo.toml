@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2021"
 include = [
     "src/*.rs",
-    "**/*.md",
+    "*.md",
     "Cargo.toml"
 ]
 repository = "https://github.com/kekonn/fercord"

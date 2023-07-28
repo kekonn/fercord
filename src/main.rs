@@ -21,9 +21,17 @@ pub struct ServerData {
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
-    event!(Level::DEBUG, "Reading configuration");
+    let config_file_path = {
+        if let Ok(config_path) = std::env::var("CONFIG") {
+            config_path
+        } else {
+            ".config/config.toml".to_owned()
+        }
+    };
+
+    event!(Level::DEBUG, %config_file_path, "Reading configuration");
     // Load application config
-    let config = config::DiscordConfig::from_env_and_file(".config/config.toml")?;
+    let config = config::DiscordConfig::from_env_and_file(&config_file_path)?;
 
     // Db Setup
     event!(Level::DEBUG, "Database setup");

@@ -1,11 +1,10 @@
 use poise::async_trait;
 use sqlx::{Pool, Postgres, Database};
-use tracing::{event, instrument, Level};
+use tracing::{event, Level};
 use anyhow::{Result, Context};
 use sqlx::postgres::PgPoolOptions;
 
 /// Create a database connection and run any pending migrations
-#[instrument]
 pub async fn setup(url: &str) -> Result<Pool<Postgres>> {
     event!(Level::DEBUG, "Connecting to the database");
     let pool = PgPoolOptions::new()

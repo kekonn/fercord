@@ -1,0 +1,11 @@
+/target
+/.config
+.env
+/.idea
+/.vscode
+/.fleet
+*.db
+
+.github
+.devcontainer
+.testdata
