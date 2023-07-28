@@ -7,14 +7,14 @@ use anyhow::Context;
 use discord::commands::{timezone, zuigt_ge_nog, reminder};
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::Activity;
-use sqlx::Pool;
+use sqlx::AnyPool;
 use tracing::*;
 
 use crate::{storage::{db, kv::KVClient}, job::{Job, job_scheduler}};
 
 pub struct ServerData {
     pub kv_client: KVClient,
-    pub db_pool: Pool<sqlx::Postgres>,
+    pub db_pool: AnyPool,
 }
 
 #[tokio::main]
@@ -35,6 +35,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Db Setup
     event!(Level::DEBUG, "Database setup");
+    
     let db_pool = db
         ::setup(config.database_url.as_ref()).await
         .with_context(|| "Error setting up database connection")?;

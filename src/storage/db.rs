@@ -1,13 +1,12 @@
 use poise::async_trait;
-use sqlx::{Pool, Postgres, Database};
+use sqlx::{AnyPool, any::AnyPoolOptions};
 use tracing::{event, Level};
 use anyhow::{Result, Context};
-use sqlx::postgres::PgPoolOptions;
 
 /// Create a database connection and run any pending migrations
-pub async fn setup(url: &str) -> Result<Pool<Postgres>> {
+pub async fn setup(url: &str) -> Result<AnyPool> {
     event!(Level::DEBUG, "Connecting to the database");
-    let pool = PgPoolOptions::new()
+    let pool = AnyPoolOptions::new()
         .max_connections(2)
         .connect(url).await.with_context(|| "Error connecting to database")?;
 
@@ -19,10 +18,9 @@ pub async fn setup(url: &str) -> Result<Pool<Postgres>> {
     Ok(pool)
 }
 
-pub struct Repo<'r, C>
-    where C: Database
+pub struct Repo<'r>
 {
-    pub(crate) pool: &'r Pool<C>,
+    pub(crate) pool: &'r AnyPool,
 }
 
 #[async_trait]

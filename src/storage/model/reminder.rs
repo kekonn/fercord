@@ -2,7 +2,7 @@ use crate::storage::db::{Repo, Repository};
 
 use chrono::{DateTime, Utc};
 use poise::async_trait;
-use sqlx::{Postgres, Row, Pool, FromRow};
+use sqlx::{Row, FromRow, AnyPool, Any};
 use anyhow::{Result, Context};
 use tracing::{event, Level, trace};
 
@@ -16,7 +16,7 @@ pub struct Reminder {
     pub channel: u64,
 }
 
-pub type ReminderRepo<'r> = Repo<'r, Postgres>;
+pub type ReminderRepo<'r> = Repo<'r>;
 
 impl<'r> ReminderRepo<'r> {
 
@@ -87,9 +87,10 @@ impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
     async fn get(&self, id: i64) -> Result<Option<Reminder>> {
         event!(Level::TRACE, "Retrieving Reminder with id {}", id);
 
-        if let Some(query) = sqlx::query_as::<Postgres, ReminderEntity>("SELECT * FROM public.reminders WHERE id = $1")
-                .bind(id).fetch_optional(self.pool).await.with_context(|| "Error getting Reminder with id")? {
-             Ok(Some(query.try_into().with_context(|| "Error converting entity to reminder")?))
+        if let Some(query) = sqlx::query_as::<Any, ReminderEntity>("SELECT * FROM public.reminders WHERE id = $1")
+                .bind(id)
+                .fetch_optional(self.pool).await.with_context(|| "Error getting Reminder with id")? {
+                    Ok(Some(query.try_into().with_context(|| "Error converting entity to reminder")?))
         } else {
             Ok(None)
         }
@@ -99,7 +100,7 @@ impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
 impl Reminder {
 
     /// Create a `Reminder` repository that connects to the database with the borrowed pool.
-    pub fn repository(pool: &Pool<Postgres>) -> ReminderRepo {
+    pub fn repository(pool: &AnyPool) -> ReminderRepo {
         Repo { pool }
     }
 }
