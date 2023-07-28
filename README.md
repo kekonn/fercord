@@ -27,6 +27,7 @@ Settings set through environment variables take precendence over configuration s
 ## Docker
 
 The container has a built-in `config.toml` stored at `/config/config.toml`. The only setting set there is job_interval_min (set to 1).
+If you want to build your own docker image, you can override the location fercord looks for the config file by setting the `CONFIG` environment variable in the Dockerfile.
 
 This means the following environment variables HAVE to be specified in order for the container to be able to function:
 
