@@ -40,6 +40,7 @@ RUN chown ${UID}:${UID} /config/config.toml /app
 
 ENV TZ=Etc/UTC \
     APP_USER=appuser \
+    CONFIG=/config/config.toml \
     RUST_BACKTRACE=0 \
     RUST_LOG="info,sqlx::query=warn"
 
