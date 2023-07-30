@@ -1,4 +1,17 @@
+#[cfg(feature = "mariadb")]
+pub mod mariadb;
+
+#[cfg(feature = "postgres")]
+pub mod postgres;
+
 use crate::storage::db::{Repo, Repository};
+
+#[cfg(feature = "mariadb")]
+use crate::storage::model::reminder::mariadb::*;
+
+
+#[cfg(feature = "postgres")]
+use crate::storage::model::reminder::postgres::*;
 
 use chrono::{DateTime, Utc};
 use poise::async_trait;
@@ -16,6 +29,8 @@ pub struct Reminder {
     pub channel: u64,
 }
 
+
+
 pub type ReminderRepo<'r> = Repo<'r>;
 
 impl<'r> ReminderRepo<'r> {
@@ -25,10 +40,7 @@ impl<'r> ReminderRepo<'r> {
         let now = Utc::now();
         event!(Level::TRACE, "Getting all reminders between {} and {}", &moment, &now);
 
-        let query = sqlx::query(r#"SELECT *
-        FROM public.reminders
-        WHERE "when" >= $1 and "when" < $2
-        "#)
+        let query = sqlx::query(REMINDERS_SINCE_QUERY)
             .bind(moment)
             .bind(now)
             .fetch_all(self.pool).await?;
@@ -54,9 +66,7 @@ impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
 
         let trans = self.pool.begin().await?;
 
-        let query = sqlx::query(r#"INSERT INTO public.reminders
-        (who, "when", what, "server", channel)
-        VALUES($1, $2, $3, $4, $5) RETURNING id;"#)
+        let query = sqlx::query(INSERT_QUERY)
             .bind(db_ent.who)
             .bind(db_ent.when)
             .bind(db_ent.what)
@@ -74,7 +84,7 @@ impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
 
         let trans = self.pool.begin().await?;
 
-        sqlx::query("DELETE FROM public.reminders WHERE id=$1;")
+        sqlx::query(DELETE_QUERY)
             .bind(entity.id)
             .execute(self.pool).await.with_context(|| "Error deleting reminder")?;
 
@@ -87,7 +97,7 @@ impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
     async fn get(&self, id: i64) -> Result<Option<Reminder>> {
         event!(Level::TRACE, "Retrieving Reminder with id {}", id);
 
-        if let Some(query) = sqlx::query_as::<Any, ReminderEntity>("SELECT * FROM public.reminders WHERE id = $1")
+        if let Some(query) = sqlx::query_as::<Any, ReminderEntity>(GET_ONE_QUERY)
                 .bind(id)
                 .fetch_optional(self.pool).await.with_context(|| "Error getting Reminder with id")? {
                     Ok(Some(query.try_into().with_context(|| "Error converting entity to reminder")?))

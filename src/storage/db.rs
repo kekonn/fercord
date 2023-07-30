@@ -10,12 +10,29 @@ pub async fn setup(url: &str) -> Result<AnyPool> {
         .max_connections(2)
         .connect(url).await.with_context(|| "Error connecting to database")?;
 
-    let migrations = sqlx::migrate!();
-
-    event!(Level::DEBUG, "Running any pending migrations");
-    migrations.run(&pool).await.with_context(|| "Error applying migrations")?;
+    run_migrations(&pool).await?;
 
     Ok(pool)
+}
+
+#[cfg(feature = "mariadb")]
+async fn run_migrations(pool: &AnyPool) -> Result<()> {
+    let migrations = sqlx::migrate!("migrations/mariadb");
+
+    event!(Level::DEBUG, "Running any pending migrations");
+    migrations.run(pool).await.with_context(|| "Error applying migrations")?;
+
+    Ok(())
+}
+
+#[cfg(feature = "postgres")]
+async fn run_migrations(pool: &AnyPool) -> Result<()> {
+    let migrations = sqlx::migrate!("migrations/postgres");
+
+    event!(Level::DEBUG, "Running any pending migrations");
+    migrations.run(pool).await.with_context(|| "Error applying migrations")?;
+
+    Ok(())
 }
 
 pub struct Repo<'r>
