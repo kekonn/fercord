@@ -5,6 +5,8 @@
 /.vscode
 /.fleet
 *.db
+*.db-shm
+*.db-wal
 
 .github
 .devcontainer

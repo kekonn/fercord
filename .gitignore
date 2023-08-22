@@ -5,3 +5,5 @@
 /.vscode
 /.fleet
 *.db
+*.db-shm
+*.db-wal
