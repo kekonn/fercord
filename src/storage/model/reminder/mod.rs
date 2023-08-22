@@ -1,13 +1,13 @@
-#[cfg(feature = "mariadb")]
-pub mod mariadb;
+#[cfg(feature = "sqlite")]
+pub mod sqlite;
 
 #[cfg(feature = "postgres")]
 pub mod postgres;
 
 use crate::storage::db::{Repo, Repository};
 
-#[cfg(feature = "mariadb")]
-use crate::storage::model::reminder::mariadb::*;
+#[cfg(feature = "sqlite")]
+use crate::storage::model::reminder::sqlite::*;
 
 
 #[cfg(feature = "postgres")]

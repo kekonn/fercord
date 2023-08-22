@@ -3,7 +3,11 @@ use sqlx::{AnyPool, any::AnyPoolOptions};
 use tracing::{event, Level};
 use anyhow::{Result, Context};
 
+#[cfg(feature = "sqlite")]
+use sqlx::{Sqlite, migrate::MigrateDatabase};
+
 /// Create a database connection and run any pending migrations
+#[cfg(not(feature = "sqlite"))]
 pub async fn setup(url: &str) -> Result<AnyPool> {
     event!(Level::DEBUG, "Connecting to the database");
     let pool = AnyPoolOptions::new()
@@ -15,9 +19,30 @@ pub async fn setup(url: &str) -> Result<AnyPool> {
     Ok(pool)
 }
 
-#[cfg(feature = "mariadb")]
+#[cfg(feature = "sqlite")]
+pub async fn setup(url: &str) -> Result<AnyPool> {
+    event!(Level::DEBUG, "Checking if database exists");
+
+    if !Sqlite::database_exists(url).await? {
+        event!(Level::DEBUG, "Could not find database, creating a new one");
+        Sqlite::create_database(url).await.with_context(|| format!("Error creating sqlite database {}", url))?;
+    } else {
+        event!(Level::DEBUG, "Databse {} already exists", url);
+    }
+
+    event!(Level::DEBUG, "Connecting to the database");
+    let pool = AnyPoolOptions::new()
+        .max_connections(2)
+        .connect(url).await.with_context(|| "Error connecting to database")?;
+
+    run_migrations(&pool).await?;
+
+    Ok(pool)
+}
+
+#[cfg(feature = "sqlite")]
 async fn run_migrations(pool: &AnyPool) -> Result<()> {
-    let migrations = sqlx::migrate!("migrations/mariadb");
+    let migrations = sqlx::migrate!("migrations/sqlite");
 
     event!(Level::DEBUG, "Running any pending migrations");
     migrations.run(pool).await.with_context(|| "Error applying migrations")?;

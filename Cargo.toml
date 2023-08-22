@@ -15,8 +15,8 @@ keywords = ["discord", "bot"]
 license = "GPL-3.0-or-later"
 
 [features]
-default = ["mariadb"]
-mariadb = ["sqlx/mysql"]
+default = ["sqlite"]
+sqlite = ["sqlx/sqlite"]
 postgres = ["sqlx/postgres"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
