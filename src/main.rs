@@ -11,10 +11,12 @@ use sqlx::AnyPool;
 use tracing::*;
 
 use crate::{storage::{db, kv::KVClient}, job::{Job, job_scheduler}};
+use crate::config::DiscordConfig;
 
 pub struct ServerData {
     pub kv_client: KVClient,
     pub db_pool: AnyPool,
+    pub config: DiscordConfig
 }
 
 #[tokio::main]
@@ -48,6 +50,7 @@ async fn main() -> anyhow::Result<()> {
     event!(Level::DEBUG, "Discord client setup");
     let token = config.discord_token.as_str();
 
+    let discord_config = config.clone();
     let framework = poise::Framework
         ::builder()
         .options(poise::FrameworkOptions {
@@ -67,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
                     ::register_globally(ctx, &framework.options().commands).await
                     .with_context(|| "Error creating Discord client")?;
 
-                Ok(ServerData { kv_client, db_pool })
+                Ok(ServerData { kv_client, db_pool, config: discord_config })
             })
         })
         .build().await?;
