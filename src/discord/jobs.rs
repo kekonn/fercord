@@ -54,7 +54,8 @@ impl Job for RemindersCleanupJob {
         let job_interval = discord_config.job_interval_min;
 
         // now is now + job_interval because we don't need to delete immediately and we don't want the delete to complete before the reminder job.
-        let now = Utc::now() + Duration::minutes((job_interval * 2) as i64);
+        // TODO: This currently does not take into account pauses in the intervals because of maintenance etc. We should use a calculation that accounts for last_run_time
+        let now = Utc::now() - Duration::minutes((job_interval * 2) as i64);
         let span = debug_span!("fercord.jobs.reminders_cleanup", cutoff_time = field::display(now));
         let _enter = span.enter();
 
