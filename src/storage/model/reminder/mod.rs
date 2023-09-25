@@ -13,10 +13,11 @@ use crate::storage::model::reminder::sqlite::*;
 #[cfg(feature = "postgres")]
 use crate::storage::model::reminder::postgres::*;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use poise::async_trait;
 use sqlx::{Row, FromRow, AnyPool, Any};
 use anyhow::{Result, Context};
+use sqlx::any::AnyRow;
 use tracing::{event, Level, trace};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -29,8 +30,6 @@ pub struct Reminder {
     pub channel: u64,
 }
 
-
-
 pub type ReminderRepo<'r> = Repo<'r>;
 
 impl<'r> ReminderRepo<'r> {
@@ -40,20 +39,58 @@ impl<'r> ReminderRepo<'r> {
         let now = Utc::now();
         event!(Level::TRACE, "Getting all reminders between {} and {}", &moment, &now);
 
-        let query = sqlx::query(REMINDERS_SINCE_QUERY)
+        let query = sqlx::query(REMINDERS_BETWEEN_QUERY)
             .bind(moment)
             .bind(now)
             .fetch_all(self.pool).await?;
 
         trace!("Found {} reminders", query.len());
 
-        let reminders: Vec<Reminder> = query.iter().map(|r| ReminderEntity::from_row(r).ok())
-            .filter_map(|o| o.and_then(|f| Reminder::try_from(f).ok())).collect();
+        let reminders: Vec<Reminder> = query_to_entity(query);
 
         trace!("{} records remaining after mapping", reminders.len());
 
         Ok(reminders)
     }
+
+    /// Get all reminders before the given moment
+    pub async fn get_reminders_before(&self, moment: &DateTime<Utc>) -> Result<Vec<Reminder>> {
+        event!(Level::TRACE, "Getting all reminders before {}", &moment);
+
+        let query = sqlx::query(REMINDERS_BETWEEN_QUERY)
+            .bind(NaiveDateTime::UNIX_EPOCH)
+            .bind(moment)
+            .fetch_all(self.pool).await.with_context(|| "Error fetching expired reminders")?;
+
+        Ok(query_to_entity(query))
+    }
+
+    /// Bulk delete reminders
+    pub async fn delete_reminders(&self, reminders: Vec<Reminder>) -> Result<()> {
+        event!(Level::TRACE, "Deleting {} reminders", &reminders.len());
+
+        if reminders.is_empty() {
+            return Ok(());
+        }
+
+        let reminder_ids = reminders.iter().fold(String::from(""), |s, r| s + r.id.to_string().as_str() + ",");
+        let reminder_ids = reminder_ids.trim_end_matches(',');
+
+        let trans = self.pool.begin().await.with_context(|| "Error starting transaction")?;
+
+        let query = sqlx::query(&BATCH_DELETE_QUERY.replace('?', reminder_ids))
+            .execute(self.pool).await.with_context(|| "Error deleting reminders")?;
+
+        event!(Level::DEBUG, "Deleted {} reminders", query.rows_affected());
+
+        trans.commit().await.with_context(|| "Error committing transaction")
+    }
+}
+
+/// Converts an iterator over `AnyRow`s into a vector of `Reminder`s
+fn query_to_entity(query: Vec<AnyRow>) -> Vec<Reminder> {
+    query.iter().map(|r| ReminderEntity::from_row(r).ok())
+        .filter_map(|o| o.and_then(|f| Reminder::try_from(f).ok())).collect()
 }
 
 #[async_trait]
@@ -105,6 +142,7 @@ impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
             Ok(None)
         }
     }
+
 }
 
 impl Reminder {

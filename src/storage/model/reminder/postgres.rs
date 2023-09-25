@@ -1,5 +1,5 @@
 
-pub(super) const REMINDERS_SINCE_QUERY: &str = r#"SELECT *
+pub(super) const REMINDERS_BETWEEN_QUERY: &str = r#"SELECT *
 FROM public.reminders
 WHERE "when" >= $1 and "when" < $2
 "#;

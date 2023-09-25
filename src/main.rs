@@ -80,7 +80,7 @@ async fn main() -> anyhow::Result<()> {
     let shard_key = uuid::Uuid::new_v4();
     info!(%shard_key);
 
-    let jobs: Vec<Box<dyn Job>> = vec![discord::jobs::reminders()];
+    let jobs: Vec<Box<dyn Job>> = vec![discord::jobs::reminders(), discord::jobs::reminders_cleanup()];
     let discord_client = framework.client().cache_and_http.clone();
 
     let (discord_result, scheduler_result) = tokio::join!(

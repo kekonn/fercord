@@ -26,12 +26,13 @@ pub struct JobArgs {
     pub db_pool: Arc<AnyPool>,
     pub last_run_time: DateTime<Utc>,
     pub discord_client: Arc<serenity::CacheAndHttp>,
+    pub discord_config: DiscordConfig,
 }
 
 impl JobArgs {
     /// Create a new JobArgs struct from a `KVClient` and an sqlx Postgres pool.
-    fn new(kv_client: &Arc<KVClient>, db_pool: &Arc<AnyPool>, last_run_time: DateTime<Utc>, discord_client: &Arc<serenity::CacheAndHttp>) -> Self {
-        Self { kv_client: kv_client.clone(), db_pool: db_pool.clone(), last_run_time, discord_client: discord_client.clone() }
+    fn new(kv_client: &Arc<KVClient>, db_pool: &Arc<AnyPool>, last_run_time: DateTime<Utc>, discord_client: &Arc<serenity::CacheAndHttp>, discord_config: DiscordConfig) -> Self {
+        Self { kv_client: kv_client.clone(), db_pool: db_pool.clone(), last_run_time, discord_client: discord_client.clone(), discord_config }
     }
 }
 
@@ -102,7 +103,7 @@ pub(crate) async fn job_scheduler(
 
         for job in jobs {
 
-            let job_args = Arc::new(JobArgs::new(&kv_client, &db_pool, last_time_ran, discord_client));
+            let job_args = Arc::new(JobArgs::new(&kv_client, &db_pool, last_time_ran, discord_client, app_config.clone()));
             
             if let Err(e) = job.run(&job_args).await {
                 event!(Level::ERROR, "Encountered an error during a background job: {:?}", e);
