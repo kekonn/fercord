@@ -1,12 +1,18 @@
-
 use anyhow::{ Result, anyhow };
 use chrono::{DateTime, TimeZone, Utc};
-use chrono_english::{Dialect, parse_date_string};
+use chrono_english::{ Dialect, parse_date_string };
 use tracing::{ trace_span, event, Level, field, debug, warn };
-use chrono_tz::{ Tz, TZ_VARIANTS };
+use chrono_tz::{Tz, TZ_VARIANTS};
 use poise::serenity_prelude as serenity;
 
-use crate::{discord::Context, storage::{model::{guild_timezone::GuildTimezone, reminder::Reminder}, kv::KVClient, db::Repository}};
+use crate::{
+    discord::Context,
+    storage::{
+        model::{ guild_timezone::GuildTimezone, reminder::Reminder },
+        kv::KVClient,
+        db::Repository,
+    },
+};
 
 const FROM_NOW: &str = "from now";
 
@@ -18,8 +24,7 @@ pub async fn zuigt_ge_nog(ctx: Context<'_>) -> Result<()> {
 
     event!(Level::TRACE, "Received zuigt_ge_nog command");
 
-    ctx.say(format!("Vacuuming at {:?}", std::time::SystemTime::now()))
-        .await?;
+    ctx.say(format!("Vacuuming at {:?}", std::time::SystemTime::now())).await?;
 
     event!(Level::TRACE, "Replied successfully");
     Ok(())
@@ -29,9 +34,7 @@ pub async fn zuigt_ge_nog(ctx: Context<'_>) -> Result<()> {
 #[poise::command(slash_command)]
 pub async fn timezone(
     ctx: Context<'_>,
-    #[autocomplete = "autocomplete_timezone"]
-    #[description = "The IANA name of the timezone. Type the first 3 letters of the timezone to autocomplete."]
-    timezone: String,
+    #[autocomplete = "autocomplete_timezone"] #[description = "The IANA name of the timezone. Type the first 3 letters of the timezone to autocomplete."] timezone: String
 ) -> Result<()> {
     let span = trace_span!(
         "fercord.discord.timezone",
@@ -62,8 +65,7 @@ pub async fn timezone(
                     Level::DEBUG,
                     "Successfully set the timezone for this server"
                 );
-                ctx.say(format!("Set timezone {} for the server.", &timezone))
-                    .await?;
+                ctx.say(format!("Set timezone {} for the server.", &timezone)).await?;
 
                 Ok(())
             }
@@ -84,7 +86,6 @@ pub async fn timezone(
     }
 }
 
-
 /// Create a reminder
 ///
 /// * when: When to remind you
@@ -98,6 +99,7 @@ pub async fn reminder(ctx: Context<'_>, when: String, what: String) -> Result<()
     );
     let _enter = span.enter();
     event!(Level::TRACE, ?when, ?what, "Received reminder command");
+    let now = Utc::now();
 
     ctx.defer_ephemeral().await?;
 
@@ -128,12 +130,19 @@ pub async fn reminder(ctx: Context<'_>, when: String, what: String) -> Result<()
         }
     };
 
-    if let Ok(parsed_datetime) = parse_human_time(&when, guild_timezone) {
+    if let Ok(parsed_datetime) = parse_human_time(&when, guild_timezone, Some(now.with_timezone(&guild_timezone))) {
         event!(
             Level::TRACE,
             ?parsed_datetime,
             "Parsed '{when}' into {parsed_datetime:#?}"
         );
+
+        let user_data = ctx.framework().user_data().await;
+        let min_duration = user_data.config.job_interval_min as i64;
+        let interval = parsed_datetime.signed_duration_since(now);
+        if interval.num_minutes() < min_duration {
+            return Err(anyhow!("The minimum amount of time for a reminder is {} minute.", min_duration));
+        }
 
         let reminder = Reminder {
             id: 0, // will be ignored on insert
@@ -141,7 +150,7 @@ pub async fn reminder(ctx: Context<'_>, when: String, what: String) -> Result<()
             channel: ctx.channel_id().0,
             who: ctx.author().id.0,
             when: parsed_datetime.with_timezone(&Utc),
-            what: what.clone()
+            what: what.clone(),
         };
 
         let repo = Reminder::repository(&ctx.data().db_pool);
@@ -149,15 +158,15 @@ pub async fn reminder(ctx: Context<'_>, when: String, what: String) -> Result<()
 
         event!(Level::TRACE, "Saved event with id {}", id);
 
-        ctx.say(format!(
-            "Got it! I will remind you at {} about {}",
-            parsed_datetime.format("%d/%m/%Y %H:%M"),
-            what
-        ))
-        .await?;
+        ctx.say(
+            format!(
+                "Got it! I will remind you at {} about {}",
+                parsed_datetime.format("%d/%m/%Y %H:%M"),
+                what
+            )
+        ).await?;
     } else {
-        ctx.say(format!("What the hell am I supposed to make of {when}?!"))
-            .await?;
+        ctx.say(format!("What the hell am I supposed to make of {when}?!")).await?;
     }
 
     Ok(())
@@ -175,18 +184,22 @@ async fn get_guild_timezone(client: &KVClient, guild_id: &serenity::GuildId) -> 
         return Ok(Tz::UTC);
     }
 
-    guild_timezone.unwrap().timezone.parse::<Tz>().map_err(|e| anyhow!(e))
+    guild_timezone
+        .unwrap()
+        .timezone.parse::<Tz>()
+        .map_err(|e| anyhow!(e))
 }
 
-pub(crate) fn parse_human_time<T>(when: impl Into<String>, tz: T) -> Result<DateTime<T>>
-where
-    T: TimeZone,
+pub(crate) fn parse_human_time<Tz>(when: impl Into<String>, tz: Tz, now: Option<DateTime<Tz>>) -> Result<DateTime<Tz>>
+    where Tz: TimeZone + Copy,
+    Tz::Offset: Copy
 {
     let span = trace_span!(
         "discord.parse_human_time",
         raw_input = field::Empty,
         clean_input = field::Empty,
-        parsed_datetime = field::Empty
+        parsed_datetime = field::Empty,
+        now = field::debug(&now),
     );
     let _enter = span.enter();
 
@@ -194,23 +207,19 @@ where
     event!(Level::TRACE, "Parsing '{raw_input}' to a date/time");
     span.record("raw_input", field::debug(&raw_input));
 
+    let now = now.unwrap_or(Utc::now().with_timezone(&tz));
+
     let cleaned_input = clean_input(raw_input);
     span.record("cleaned_input", field::debug(&cleaned_input));
     event!(Level::TRACE, ?cleaned_input, "Cleaned up raw input");
 
-    if let Ok(parsed_datetime) = parse_date_string(&cleaned_input, Utc::now(), Dialect::Us) {
-        event!(
-            Level::TRACE,
-            "Parsed '{cleaned_input}' into '{parsed_datetime:#?}'"
-        );
-        span.record("parsed_datetime", field::display(&parsed_datetime));
+    if let Ok(parsed_datetime) = parse_date_string::<Tz>(&cleaned_input, now, Dialect::Us) {
+        event!(Level::TRACE, "Parsed '{cleaned_input}' into '{parsed_datetime:#?}'");
+        span.record("parsed_datetime", field::debug(&parsed_datetime));
 
         Ok(parsed_datetime.with_timezone(&tz))
     } else {
-        event!(
-            Level::TRACE,
-            "Failed to parse raw input to a useful DateTime"
-        );
+        event!(Level::TRACE, "Failed to parse raw input to a useful DateTime");
 
         Err(anyhow!("Failed to parse raw input to a useful DateTime"))
     }
@@ -233,26 +242,31 @@ pub(crate) fn clean_input(natural_input: String) -> String {
     pre_clean.trim().to_string()
 }
 
-
 /// Autocomplete renderer for the timezones list.
 async fn autocomplete_timezone<'a>(
     _ctx: Context<'_>,
-    partial: &str,
+    partial: &str
 ) -> impl Iterator<Item = String> {
     let timezones: Vec<String> = filter_timezones(partial).collect();
     match timezones.len() {
         1..=100 => timezones.into_iter(),
         101.. => timezones.chunks(100).next().unwrap().to_vec().into_iter(),
-        _ => vec![String::from(
-            "Please type the first 3 characters of your timezone to start a search",
-        )]
-        .into_iter(),
+        _ =>
+            vec![
+                String::from(
+                    "Please type the first 3 characters of your timezone to start a search"
+                )
+            ].into_iter(),
     }
 }
 
 fn filter_timezones(pattern: &str) -> impl Iterator<Item = String> + '_ {
-    TZ_VARIANTS
-        .iter()
-        .filter_map(move |tz| tz.name().find(pattern).map(|_| tz.name()))
+    TZ_VARIANTS.iter()
+        .filter_map(move |tz|
+            tz
+                .name()
+                .find(pattern)
+                .map(|_| tz.name())
+        )
         .map(|tz| tz.to_string())
 }

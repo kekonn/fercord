@@ -6,8 +6,11 @@
 
 ### Added
 - Docker support
+- Compile time multi-database support
 
 ### Changed
+- Convert SQLx code to use the Any provider
+- [BREAKING] Default database will be MariaDB moving forward
 
 ### Fixed
 

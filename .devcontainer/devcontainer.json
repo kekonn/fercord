@@ -19,10 +19,11 @@
 	},
 
 	"postCreateCommand": [
-		"bash -i 'cargo install cargo-binstall && cargo binstall -y cargo-watch && cargo binstall -y ripgrep'"
+		"cargo install cargo-binstall && cargo binstall -y cargo-watch && cargo binstall -y ripgrep && cargo binstall -y cargo-update",
+		"cd ${containerWorkspaceFolder} && cargo build"
 	],
 	"postStartCommand": [
-		"cd ${containerWorkspaceFolder} && cargo build"
+		"cd ${containerWorkspaceFolder} && cargo install-update -a"
 	],
 
 	// Configure tool-specific properties.
@@ -48,7 +49,10 @@
 				"tamasfe.even-better-toml",
 				"serayuzgur.crates",
 				"hbenl.vscode-test-explorer",
-				"Swellaby.vscode-rust-test-adapter"
+				"Swellaby.vscode-rust-test-adapter",
+				"mhutchie.git-graph",
+				"cweijan.vscode-redis-client",
+				"cweijan.vscode-postgresql-client2"
 			]
 		}
 	},

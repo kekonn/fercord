@@ -7,14 +7,16 @@ use anyhow::Context;
 use discord::commands::{timezone, zuigt_ge_nog, reminder};
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::Activity;
-use sqlx::Pool;
+use sqlx::AnyPool;
 use tracing::*;
 
 use crate::{storage::{db, kv::KVClient}, job::{Job, job_scheduler}};
+use crate::config::DiscordConfig;
 
 pub struct ServerData {
     pub kv_client: KVClient,
-    pub db_pool: Pool<sqlx::Postgres>,
+    pub db_pool: AnyPool,
+    pub config: DiscordConfig
 }
 
 #[tokio::main]
@@ -35,6 +37,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Db Setup
     event!(Level::DEBUG, "Database setup");
+    
     let db_pool = db
         ::setup(config.database_url.as_ref()).await
         .with_context(|| "Error setting up database connection")?;
@@ -47,6 +50,7 @@ async fn main() -> anyhow::Result<()> {
     event!(Level::DEBUG, "Discord client setup");
     let token = config.discord_token.as_str();
 
+    let discord_config = config.clone();
     let framework = poise::Framework
         ::builder()
         .options(poise::FrameworkOptions {
@@ -66,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
                     ::register_globally(ctx, &framework.options().commands).await
                     .with_context(|| "Error creating Discord client")?;
 
-                Ok(ServerData { kv_client, db_pool })
+                Ok(ServerData { kv_client, db_pool, config: discord_config })
             })
         })
         .build().await?;
@@ -76,7 +80,7 @@ async fn main() -> anyhow::Result<()> {
     let shard_key = uuid::Uuid::new_v4();
     info!(%shard_key);
 
-    let jobs: Vec<Box<dyn Job>> = vec![discord::jobs::reminders()];
+    let jobs: Vec<Box<dyn Job>> = vec![discord::jobs::reminders(), discord::jobs::reminders_cleanup()];
     let discord_client = framework.client().cache_and_http.clone();
 
     let (discord_result, scheduler_result) = tokio::join!(
