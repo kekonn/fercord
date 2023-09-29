@@ -7,7 +7,7 @@
 # More details at https://github.com/rust-lang/rust-clippy
 # and https://rust-lang.github.io/rust-clippy/
 
-name: rust-clippy analyze
+name: Run clippy on PR
 
 on:
   pull_request:
@@ -35,8 +35,14 @@ jobs:
           components: clippy
           override: true
 
+      - uses: swatinem/rust-cache@v2
+        with:
+          save-if: false
+          key: ${{ github.event.pull_request.title }}
+
+      - uses: taiki-e/install-action@cargo-binstall
       - name: Install required cargo
-        run: cargo install clippy-sarif sarif-fmt
+        run: cargo binstall clippy-sarif sarif-fmt
 
       - name: Run rust-clippy
         run:
