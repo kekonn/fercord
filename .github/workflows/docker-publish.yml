@@ -24,7 +24,6 @@ jobs:
       # This is used to complete the identity challenge
       # with sigstore/fulcio when running outside of PRs.
       id-token: write
-      packages: write
 
     steps:
       - name: Checkout repository
@@ -42,7 +41,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_DEPLOY_TOKEN }}
 
       - name: Get Latest Tag
         id: latestTag
