@@ -11,7 +11,7 @@ name: Check PR
 
 on:
   pull_request:
-    types: ["ready_for_review", "auto_merge_enabled", "edited"]
+    types: ["ready_for_review", "auto_merge_enabled"]
     # The branches below must be a subset of the branches above
     branches: [ "main" ]
 
@@ -22,7 +22,6 @@ jobs:
     name: Build and cache
     runs-on: ubuntu-latest
     steps:
-      
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install Rust toolchain
@@ -37,7 +36,6 @@ jobs:
         name: Cache setup
         with:
           shared-key: PR${{ github.event.number }}-${{ steps.rustToolchain.outputs.cachekey }}-${{ steps.rustToolchain.outputs.name }}-${{ github.workflow_sha }}
-          cache-directories: "$CARGO_HOME/bin"
       - uses: taiki-e/install-action@cargo-binstall
         name: Install cargo-binstall
       - name: Build project and tests
@@ -81,6 +79,7 @@ jobs:
           wait-for-processing: true
 
   cargo-test:
+    name: Run unit tests
     runs-on: ubuntu-latest
     needs:
       - cache-build
