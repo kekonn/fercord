@@ -2,10 +2,15 @@
 A discord bot written in Rust, for personal use.
 
 ## Configuration
+### When running locally/directly
+
+You can specify the location of the config file by setting the `CONFIG` environment variable (i.e.: `CONFIG=$XDG_CONFIG_HOME/fercord/config.toml`) or if not specified we look in `.config/config.toml` in the current working directory. 
+
+Example `config.toml`:
 
 ```toml
 discord_token = "your-bot-token"
-database_url = "postgres://fercord:fercord@localhost/fercord"
+database_url = "sqlite://fercord.db"
 redis_url = "redis://localhost/"
 job_interval_min = 1
 shard_key = "c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"
@@ -37,6 +42,8 @@ This means the following environment variables HAVE to be specified in order for
 * FERCORD_SHARD_KEY
 
 If you want a different job interval, you can specify it through `FERCORD_JOB_INTERVAL_MIN`.
+
+The sqlite database is placed in the `/data` directory and called `fercord.db`. The container exposes `/data` as a volume, so it will persist between updates etc.
 
 ### RUST_LOG
 
