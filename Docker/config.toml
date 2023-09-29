@@ -1,1 +1,2 @@
 job_interval_min = 1
+database_url = "sqlite:///data/fercord.db?mode=rwc"
