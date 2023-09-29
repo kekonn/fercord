@@ -1,10 +1,11 @@
 [package]
 name = "fercord"
 description = "A Discord bot written in Rust."
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 include = [
-    "src/*.rs",
+    "src/**/*.rs",
+    "migrations/",
     "*.md",
     "Cargo.toml"
 ]
@@ -94,3 +95,4 @@ pr-run-mode = "plan"
 sign-commit = true
 sign-tag = true
 allow-branch = ["main"]
+enable-features = ["default"]
