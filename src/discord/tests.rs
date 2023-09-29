@@ -1,6 +1,7 @@
-use crate::discord::commands::*;
 use chrono::Utc;
 use tracing_test::traced_test;
+
+use crate::discord::commands::*;
 
 /// `"5 minutes"`
 const EXPECTED: &str = "5 minutes";
@@ -13,7 +14,7 @@ fn parsed_moment_is_future() {
     let now = Utc::now();
 
     // Act
-    let parsed = parse_human_time(input, Utc);
+    let parsed = parse_human_time(input, Utc, None);
 
     // Assert
     debug_assert!(parsed.is_ok(), "We did not get a successful parse");

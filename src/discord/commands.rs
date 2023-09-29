@@ -1,16 +1,16 @@
-use anyhow::{ Result, anyhow };
+use anyhow::{anyhow, Result};
 use chrono::{DateTime, TimeZone, Utc};
-use chrono_english::{ Dialect, parse_date_string };
-use tracing::{ trace_span, event, Level, field, debug, warn };
+use chrono_english::{Dialect, parse_date_string};
 use chrono_tz::{Tz, TZ_VARIANTS};
 use poise::serenity_prelude as serenity;
+use tracing::{debug, event, field, Level, trace_span, warn};
 
 use crate::{
     discord::Context,
     storage::{
-        model::{ guild_timezone::GuildTimezone, reminder::Reminder },
-        kv::KVClient,
         db::Repository,
+        kv::KVClient,
+        model::{guild_timezone::GuildTimezone, reminder::Reminder},
     },
 };
 
@@ -261,12 +261,38 @@ async fn autocomplete_timezone<'a>(
 }
 
 fn filter_timezones(pattern: &str) -> impl Iterator<Item = String> + '_ {
+    let lower_pattern = pattern.to_lowercase();
     TZ_VARIANTS.iter()
         .filter_map(move |tz|
             tz
                 .name()
-                .find(pattern)
+                .to_lowercase()
+                .find(&lower_pattern)
                 .map(|_| tz.name())
         )
         .map(|tz| tz.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+
+    use super::*;
+
+    #[test]
+    fn can_find_timezone() -> Result<()> {
+        let mixed_timezones = vec!["eUrOpe/Brussel", "europe/brussels", "EUROPE/BRUSSELS"];
+        let expected = String::from("Europe/Brussels");
+        for search in mixed_timezones {
+            let found: Vec<String> = filter_timezones(search).collect();
+
+            if let Some(found_tz) = found.first() {
+                assert_eq!(expected, *found_tz, "Found timezone does not match expected {}", expected);
+            } else {
+                return Err(anyhow!("Could not find timezone matching {}", expected));
+            }
+        }
+
+        Ok(())
+    }
 }
