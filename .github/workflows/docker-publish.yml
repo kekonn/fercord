@@ -42,7 +42,13 @@ jobs:
 
       - name: Get Latest Tag
         id: latestTag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
+        run: | 
+          latest_tag=$(git describe --tags $(git rev-list --tags --max-count=1))
+          if [ -z "$latest_tag" ]; then
+            echo "::error::No tags found"
+            exit 1
+          fi
+          echo "::set-output name=tag::$latest_tag"
 
       # Extract metadata (tags, labels) for Docker
       # https://github.com/docker/metadata-action
