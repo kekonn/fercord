@@ -7,13 +7,15 @@
 # More details at https://github.com/rust-lang/rust-clippy
 # and https://rust-lang.github.io/rust-clippy/
 
-name: Run clippy on PR
+name: Check PR
 
 on:
   pull_request:
-    types: ["ready_for_review", "auto_merge_enabled", "edited"]
+    types: ["ready_for_review", "auto_merge_enabled"]
     # The branches below must be a subset of the branches above
     branches: [ "main" ]
+
+concurrency: "PR${{ github.event.pull_request && github.event.number }}"
 
 jobs:
   rust-clippy-analyze:
@@ -26,13 +28,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - uses: swatinem/rust-cache@v2
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-
-      - uses: swatinem/rust-cache@v2
 
       - uses: taiki-e/install-action@cargo-binstall
       - name: Install required cargo
@@ -41,7 +42,7 @@ jobs:
       - name: Run rust-clippy
         run:
           cargo clippy
-          --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
+          --message-format=json --locked | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
         continue-on-error: true
 
       - name: Upload analysis results to GitHub
@@ -49,3 +50,19 @@ jobs:
         with:
           sarif_file: rust-clippy-results.sarif
           wait-for-processing: true
+
+  cargo-test:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: swatinem/rust-cache@v2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run unit tests
+        run: cargo test --locked
