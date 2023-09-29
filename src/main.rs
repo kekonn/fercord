@@ -1,17 +1,23 @@
-mod config;
-mod discord;
-mod storage;
-mod job;
-
 use anyhow::Context;
-use discord::commands::{timezone, zuigt_ge_nog, reminder};
+use clap::Parser;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::Activity;
 use sqlx::AnyPool;
 use tracing::*;
 
-use crate::{storage::{db, kv::KVClient}, job::{Job, job_scheduler}};
+use discord::commands::{reminder, timezone, zuigt_ge_nog};
+
+use crate::{job::{Job, job_scheduler}, storage::{db, kv::KVClient}};
+use crate::cli::Commands;
 use crate::config::DiscordConfig;
+use crate::healthchecks::perform_healthchecks;
+
+mod config;
+mod discord;
+mod storage;
+mod job;
+mod cli;
+mod healthchecks;
 
 pub struct ServerData {
     pub kv_client: KVClient,
@@ -23,17 +29,21 @@ pub struct ServerData {
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
-    let config_file_path = {
-        if let Ok(config_path) = std::env::var("CONFIG") {
-            config_path
-        } else {
-            ".config/config.toml".to_owned()
-        }
-    };
+    let args = cli::Args::parse();
+    let config_file_path = args.config;
 
     event!(Level::DEBUG, %config_file_path, "Reading configuration");
     // Load application config
     let config = config::DiscordConfig::from_env_and_file(&config_file_path)?;
+
+    match args.command {
+        Some(command) if command == Commands::Healthcheck => {
+            let checks_output = perform_healthchecks(&config).await?;
+            println!("{}", checks_output);
+            return Ok(());
+        },
+        _ => ()
+    }
 
     // Db Setup
     event!(Level::DEBUG, "Database setup");
