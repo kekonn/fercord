@@ -51,7 +51,7 @@ jobs:
             echo "::error::No tags found"
             exit 1
           fi
-          echo "::set-output name=tag::$latest_tag"
+          echo "tag=$latest_tag" >> "$GITHUB_OUTPUT"
 
       # Extract metadata (tags, labels) for Docker
       # https://github.com/docker/metadata-action
