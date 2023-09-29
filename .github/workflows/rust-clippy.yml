@@ -15,11 +15,39 @@ on:
     # The branches below must be a subset of the branches above
     branches: [ "main" ]
 
+concurrency: "PR${{ github.event.pull_request && github.event.number }}"
+
 jobs:
+  cache-build:
+    name: Build and cache
+    runs-on: ubuntu-latest
+    steps:
+      
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        id: rustToolchain
+        with:
+          components: clippy
+      - name: Generate cache key
+        id: generateCacheKey
+        run: echo "cache-key=PR${{ github.event.number }}-${{ steps.rustToolchain.outputs.cachekey }}-${{ steps.rustToolchain.outputs.name }}-${{ github.workflow_sha }}" >> "$GITHUB_OUTPUT"
+      - uses: swatinem/rust-cache@v2
+        name: Cache setup
+        with:
+          shared-key: PR${{ github.event.number }}-${{ steps.rustToolchain.outputs.cachekey }}-${{ steps.rustToolchain.outputs.name }}-${{ github.workflow_sha }}
+          cache-directories: "$CARGO_HOME/bin"
+      - uses: taiki-e/install-action@cargo-binstall
+        name: Install cargo-binstall
+      - name: Build project and tests
+        run: cargo build --bins --tests --locked && cargo check --locked --bins --tests
+
   rust-clippy-analyze:
     name: Analyze with clippy
+    needs:
+      - cache-build
     runs-on: ubuntu-latest
-    concurrency: "PR${{ github.event.pull_request && github.event.number }}"
     permissions:
       contents: read
       security-events: write
@@ -27,13 +55,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - uses: swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ needs.cache-build.outputs.cache-key }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-
-      - uses: swatinem/rust-cache@v2
 
       - uses: taiki-e/install-action@cargo-binstall
       - name: Install required cargo
@@ -42,7 +71,7 @@ jobs:
       - name: Run rust-clippy
         run:
           cargo clippy
-          --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
+          --message-format=json --locked | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
         continue-on-error: true
 
       - name: Upload analysis results to GitHub
@@ -53,16 +82,19 @@ jobs:
 
   cargo-test:
     runs-on: ubuntu-latest
-    needs: rust-clippy-analyze
-    concurrency: "PR${{ github.event.pull_request && github.event.number }}"
+    needs:
+      - cache-build
     permissions:
       contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - uses: swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ needs.cache-build.outputs.cache-key }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
+
       - name: Run unit tests
-        run: cargo test
+        run: cargo test --locked
