@@ -24,7 +24,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 ARG APP_NAME
-ARG UID=10001
+ARG UID=1001
 RUN adduser \
     --disabled-password \
     --gecos "" \
@@ -36,10 +36,9 @@ RUN adduser \
 
 RUN mkdir /config /app /data
 COPY ./Docker/config.toml /config/config.toml
-RUN chown ${UID}:${UID} /config/config.toml /app /data
+RUN chown -R ${UID}:${UID} /config /app /data
 
 ENV TZ=Etc/UTC \
-    APP_USER=appuser \
     CONFIG=/config/config.toml \
     RUST_BACKTRACE=0 \
     RUST_LOG="info,sqlx::query=warn"
