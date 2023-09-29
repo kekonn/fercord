@@ -11,7 +11,7 @@ name: Run clippy on PR
 
 on:
   pull_request:
-    types: ["ready_for_review", "auto_merge_enabled"]
+    types: ["ready_for_review", "auto_merge_enabled", "edited"]
     # The branches below must be a subset of the branches above
     branches: [ "main" ]
 
