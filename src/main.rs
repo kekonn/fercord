@@ -5,7 +5,7 @@ use poise::serenity_prelude::Activity;
 use sqlx::AnyPool;
 use tracing::*;
 
-use discord::commands::{reminder, timezone, zuigt_ge_nog};
+use discord::commands::{reminder, timezone};
 
 use crate::{job::{Job, job_scheduler}, storage::{db, kv::KVClient}};
 use crate::cli::Commands;
@@ -64,7 +64,7 @@ async fn main() -> anyhow::Result<()> {
     let framework = poise::Framework
         ::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![reminder(), zuigt_ge_nog(), timezone()],
+            commands: vec![reminder(), timezone()],
             ..Default::default()
         })
         .token(token)

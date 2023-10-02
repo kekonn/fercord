@@ -77,7 +77,9 @@ pub async fn timezone(
 /// * when: When to remind you
 /// * what: What to remind you of
 #[poise::command(slash_command)]
-pub async fn reminder(ctx: Context<'_>, when: String, what: String) -> Result<()> {
+pub async fn reminder(ctx: Context<'_>,
+                    #[description = "When should I remind you?"]  when: String,
+                    #[description = "What should I remind you of?"]  what: String) -> Result<()> {
     let span = trace_span!(
         "fercord.discord.reminder",
         guild_id = field::Empty,
