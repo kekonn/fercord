@@ -1,10 +1,12 @@
-use anyhow::{anyhow, Result};
-use redis::{AsyncCommands, Client, ToRedisArgs};
-use serde::{de::DeserializeOwned, Serialize};
 use std::{
     fmt::Debug,
     marker::{Send, Sync},
 };
+use std::time::Duration;
+
+use anyhow::{anyhow, Result};
+use redis::{AsyncCommands, Client, ConnectionLike, ToRedisArgs};
+use serde::{de::DeserializeOwned, Serialize};
 use tracing::*;
 
 use crate::config::DiscordConfig;
@@ -128,5 +130,22 @@ impl KVClient {
         span.record("record", field::debug(&record));
 
         Ok(Some(record))
+    }
+
+    /// Perform a connection check.
+    /// If we can obtain an open connection in 15 seconds, we return `Ok()`.
+    pub async fn connection_check(&self) -> Result<()> {
+        let connection_result = self.client.get_connection_with_timeout(Duration::from_secs(15));
+
+        match connection_result {
+            Ok(conn) => {
+                if conn.is_open() {
+                    Ok(())
+                } else {
+                    Err(anyhow!("Could not open connection"))
+                }
+            },
+            Err(e) => Err(anyhow!(e))
+        }
     }
 }
