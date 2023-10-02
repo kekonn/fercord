@@ -53,3 +53,5 @@ USER appuser
 VOLUME [ "/data" ]
 
 CMD ["/app/fercord"]
+
+HEALTHCHECK --timeout=5s CMD /app/fercord healthcheck

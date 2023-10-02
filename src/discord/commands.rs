@@ -16,20 +16,6 @@ use crate::{
 
 const FROM_NOW: &str = "from now";
 
-/// Check if the bot is still alive
-#[poise::command(slash_command)]
-pub async fn zuigt_ge_nog(ctx: Context<'_>) -> Result<()> {
-    let span = trace_span!("fercord.discord.zuigt_ge_nog");
-    let _enter = span.enter();
-
-    event!(Level::TRACE, "Received zuigt_ge_nog command");
-
-    ctx.say(format!("Vacuuming at {:?}", std::time::SystemTime::now())).await?;
-
-    event!(Level::TRACE, "Replied successfully");
-    Ok(())
-}
-
 /// Set the timezone for this server (used by time related commands).
 #[poise::command(slash_command)]
 pub async fn timezone(
@@ -91,7 +77,9 @@ pub async fn timezone(
 /// * when: When to remind you
 /// * what: What to remind you of
 #[poise::command(slash_command)]
-pub async fn reminder(ctx: Context<'_>, when: String, what: String) -> Result<()> {
+pub async fn reminder(ctx: Context<'_>,
+                    #[description = "When should I remind you?"]  when: String,
+                    #[description = "What should I remind you of?"]  what: String) -> Result<()> {
     let span = trace_span!(
         "fercord.discord.reminder",
         guild_id = field::Empty,
