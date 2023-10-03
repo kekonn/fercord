@@ -2,22 +2,21 @@ use anyhow::Context;
 use clap::Parser;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::Activity;
-use sqlx::AnyPool;
 use tracing::*;
 
-use discord::commands::{reminder, timezone};
+use fercord_storage::config::DiscordConfig;
+use fercord_storage::db;
+use fercord_storage::prelude::{AnyPool, KVClient};
 
-use crate::{job::{Job, job_scheduler}, storage::{db, kv::KVClient}};
+use crate::{job::{Job, job_scheduler}};
 use crate::cli::Commands;
-use crate::config::DiscordConfig;
+use crate::discord::commands::{reminder, timezone};
 use crate::healthchecks::perform_healthchecks;
 
-mod config;
-mod discord;
-mod storage;
 mod job;
 mod cli;
 mod healthchecks;
+mod discord;
 
 pub struct ServerData {
     pub kv_client: KVClient,
@@ -34,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
 
     event!(Level::DEBUG, %config_file_path, "Reading configuration");
     // Load application config
-    let config = config::DiscordConfig::from_env_and_file(&config_file_path)?;
+    let config = DiscordConfig::from_env_and_file(&config_file_path)?;
 
     match args.command {
         Some(command) if command == Commands::Healthcheck => {

@@ -110,8 +110,9 @@ impl Default for DiscordConfig {
 mod tests {
     //! Tests are run with the working directory set to the work space, not the directory of the source file.
 
-    use super::*;
     use std::env;
+
+    use super::*;
 
     #[test]
     fn can_deserialize_toml() {

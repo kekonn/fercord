@@ -1,10 +1,9 @@
+use anyhow::{Context, Result};
 use poise::async_trait;
-use sqlx::{AnyPool, any::AnyPoolOptions};
-use tracing::{event, Level};
-use anyhow::{Result, Context};
-
+use sqlx::{any::AnyPoolOptions, AnyPool};
 #[cfg(feature = "sqlite")]
-use sqlx::{Sqlite, migrate::MigrateDatabase};
+use sqlx::{migrate::MigrateDatabase, Sqlite};
+use tracing::{event, Level};
 
 /// Create a database connection and run any pending migrations
 #[cfg(not(feature = "sqlite"))]
@@ -42,7 +41,7 @@ pub async fn setup(url: &str) -> Result<AnyPool> {
 
 #[cfg(feature = "sqlite")]
 async fn run_migrations(pool: &AnyPool) -> Result<()> {
-    let migrations = sqlx::migrate!("migrations/sqlite");
+    let migrations = sqlx::migrate!("../migrations/sqlite");
 
     event!(Level::DEBUG, "Running any pending migrations");
     migrations.run(pool).await.with_context(|| "Error applying migrations")?;
@@ -52,7 +51,7 @@ async fn run_migrations(pool: &AnyPool) -> Result<()> {
 
 #[cfg(feature = "postgres")]
 async fn run_migrations(pool: &AnyPool) -> Result<()> {
-    let migrations = sqlx::migrate!("migrations/postgres");
+    let migrations = sqlx::migrate!("../migrations/postgres");
 
     event!(Level::DEBUG, "Running any pending migrations");
     migrations.run(pool).await.with_context(|| "Error applying migrations")?;

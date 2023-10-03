@@ -1,69 +1,17 @@
-[package]
-name = "fercord"
-description = "A Discord bot written in Rust."
-version = "0.3.0"
-edition = "2021"
-include = [
-    "src/**/*.rs",
-    "migrations/",
-    "*.md",
-    "Cargo.toml"
-]
-repository = "https://github.com/kekonn/fercord"
+[workspace]
+members = ["fercord_storage", "fercord_bot"]
+resolver = "2"
+
+[workspace.package]
 readme = "README.md"
 authors = ["Jonas Van der Aa <jonas@vdaa.website>"]
 keywords = ["discord", "bot"]
 license = "GPL-3.0-or-later"
-
-[features]
-default = ["sqlite"]
-sqlite = ["sqlx/sqlite"]
-postgres = ["sqlx/postgres"]
+description = "A Discord bot written in Rust."
+edition = "2021"
+repository = "https://github.com/kekonn/fercord"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-poise = "0.5"
-config = { version = "0.13", default-features = false, features = ["toml"] }
-serde = { version = "1", features = ["derive"]}
-serde_json = "1"
-tracing = "0.1"
-tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
-chrono = "0.4"
-chrono-tz = "0.8"
-chrono-english = "0.1"
-redis = { version = "0.23", features = ["tokio-comp", "json"] }
-reqwest = { version = "0.11", features = ["stream", "rustls-tls"]}
-clap = { version = "4", features = ["derive", "env"] }
-
-[dependencies.tokio]
-version = "1"
-features = ["rt-multi-thread", "time"]
-
-[dependencies.tokio-stream]
-version = "0.1"
-
-[dependencies.anyhow]
-version = "1"
-features = ["backtrace"]
-
-[dependencies.sqlx]
-version = "0.6"
-features = ["default", "chrono", "runtime-tokio-rustls", "any"]
-
-[dependencies.uuid]
-version = "1"
-features = [
-    "v4",                # Lets you generate random UUIDs
-    "fast-rng",          # Use a faster (but still sufficiently random) RNG
-    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
-    "serde",             # Add serde support
-]
-
-# dev dependencies
-[dev-dependencies]
-tracing-test = "0.2"
-
 [profile.release]
 opt-level = "s"
 lto = true

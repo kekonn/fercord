@@ -1,4 +1,3 @@
-use chrono::Utc;
 use tracing_test::traced_test;
 
 use crate::discord::commands::*;
