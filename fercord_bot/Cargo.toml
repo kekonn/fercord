@@ -1,6 +1,7 @@
 [package]
 name = "fercord_bot"
 version = "0.3.0"
+description = "A Discord bot written in Rust, for personal use"
 license.workspace = true
 authors.workspace = true
 edition.workspace = true
