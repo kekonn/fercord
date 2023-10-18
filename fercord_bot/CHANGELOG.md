@@ -5,7 +5,10 @@
 ## [Unreleased] - ReleaseDate
 
 ## [0.3.0] - 2023-10-03
-
+- chore: Update release pipeline
+- fix: Export sqlite database from container
+- chore: Add extra PR checks
+- feat: Add health check to container
 
 ## [0.2.0] - 2023-09-29
 
