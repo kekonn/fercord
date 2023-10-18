@@ -3,6 +3,8 @@
 <!-- next-header -->
 
 ## [Unreleased] - ReleaseDate
+- chore: Split single bin into workspace
+- chore: Update dependencies
 
 <!-- next-url -->
 [Unreleased]: https://github.com/kekonn/fercord/compare/v0.3.0...HEAD
