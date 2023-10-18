@@ -1,10 +1,9 @@
+use anyhow::{Context, Result};
 use poise::async_trait;
-use sqlx::{AnyPool, any::AnyPoolOptions};
-use tracing::{event, Level};
-use anyhow::{Result, Context};
-
+use sqlx::{any::AnyPoolOptions, AnyPool};
 #[cfg(feature = "sqlite")]
-use sqlx::{Sqlite, migrate::MigrateDatabase};
+use sqlx::{migrate::MigrateDatabase, Sqlite};
+use tracing::{event, Level};
 
 /// Create a database connection and run any pending migrations
 #[cfg(not(feature = "sqlite"))]

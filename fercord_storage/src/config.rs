@@ -2,9 +2,10 @@
 //!
 //! Create a new configuration as follows:
 //! ```rust
+//! use fercord_storage::prelude::DiscordConfig;
 //! let config = DiscordConfig::from_env().unwrap();
 //! // or when you want to use a file and only overwrite from env
-//! let config = DiscordConfig::from_env_and_file("./config.toml").unwrap();
+//! let config = DiscordConfig::from_env_and_file("../.config/config.toml").unwrap();
 //! ```
 
 use anyhow::{Context, Result};
@@ -12,7 +13,7 @@ use tracing::{event, Level};
 
 /// The application configuration.
 ///
-/// You can use [from_env()](#from_env) or [from_env_and_file(path: &str)](#from_end_and_path) to create a configuration.
+/// You can use [from_env()](#from_env) or [from_env_and_file(path: &str)](#from_env_and_file) to create a configuration.
 /// 
 /// Settings:
 /// * `discord_token`: `String`
@@ -42,7 +43,7 @@ const ENV_PREFIX: &str = "FERCORD";
 impl DiscordConfig {
     /// Create a configuration just from environment variables.
     ///  
-    /// This will read all variables prefixed with `FERIS_` and try to serialize them into a `DiscordConfig`.
+    /// This will read all variables prefixed with `FERCORD_` and try to serialize them into a `DiscordConfig`.
     #[allow(dead_code)]
     #[tracing::instrument]
     pub fn from_env() -> Result<Self> {
@@ -110,8 +111,11 @@ impl Default for DiscordConfig {
 mod tests {
     //! Tests are run with the working directory set to the work space, not the directory of the source file.
 
-    use super::*;
     use std::env;
+
+    use super::*;
+
+    const TEST_CONFIG_PATH: &str = "../.testdata/basic_config.toml";
 
     #[test]
     fn can_deserialize_toml() {
@@ -123,7 +127,7 @@ mod tests {
             shard_key: uuid::uuid!("c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"),
         };
 
-        let config = DiscordConfig::from_file(".testdata/basic_config.toml").unwrap();
+        let config = DiscordConfig::from_file(TEST_CONFIG_PATH).unwrap();
 
         assert_eq!(expected, config);
     }
@@ -142,7 +146,7 @@ mod tests {
         };
 
         // Act
-        let config = DiscordConfig::from_env_and_file(".testdata/basic_config.toml").unwrap();
+        let config = DiscordConfig::from_env_and_file(TEST_CONFIG_PATH).unwrap();
 
         // Assert
         assert_eq!(expected, config);

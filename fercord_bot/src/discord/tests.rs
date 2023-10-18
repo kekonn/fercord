@@ -1,12 +1,10 @@
 use chrono::Utc;
-use tracing_test::traced_test;
 
 use crate::discord::commands::*;
 
 /// `"5 minutes"`
 const EXPECTED: &str = "5 minutes";
 
-#[traced_test]
 #[test]
 fn parsed_moment_is_future() {
     // Arrange

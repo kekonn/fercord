@@ -1,24 +1,21 @@
+use anyhow::{Context, Result};
+use chrono::{DateTime, NaiveDateTime, Utc};
+use poise::async_trait;
+use sqlx::{Any, AnyPool, FromRow, Row};
+use sqlx::any::AnyRow;
+use tracing::{event, Level, trace};
+
+use crate::db::{Repo, Repository};
+#[cfg(feature = "postgres")]
+use crate::model::reminder::postgres::*;
+#[cfg(feature = "sqlite")]
+use crate::model::reminder::sqlite::*;
+
 #[cfg(feature = "sqlite")]
 pub mod sqlite;
 
 #[cfg(feature = "postgres")]
 pub mod postgres;
-
-use crate::storage::db::{Repo, Repository};
-
-#[cfg(feature = "sqlite")]
-use crate::storage::model::reminder::sqlite::*;
-
-
-#[cfg(feature = "postgres")]
-use crate::storage::model::reminder::postgres::*;
-
-use chrono::{DateTime, NaiveDateTime, Utc};
-use poise::async_trait;
-use sqlx::{Row, FromRow, AnyPool, Any};
-use anyhow::{Result, Context};
-use sqlx::any::AnyRow;
-use tracing::{event, Level, trace};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Reminder {

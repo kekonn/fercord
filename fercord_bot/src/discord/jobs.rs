@@ -1,12 +1,13 @@
 use std::sync::Arc;
+
 use chrono::{Duration, Utc};
-
 use poise::async_trait;
-use tracing::{ event, Level, debug_span, field };
 use poise::serenity_prelude as serenity;
+use tracing::{debug_span, event, field, Level};
 
-use crate::{ job::{ JobArgs, Job , JobResult }, storage::model::reminder::{*}};
+use fercord_storage::prelude::model::reminder::*;
 
+use crate::{job::{Job, JobArgs, JobResult}};
 
 struct RemindersJob;
 
