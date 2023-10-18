@@ -14,7 +14,7 @@ default = ["fercord_storage/sqlite"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-fercord_storage = { path = "../fercord_storage" }
+fercord_storage = { path = "../fercord_storage", version = "0.3"}
 poise = "0.5"
 config = { version = "0.13", default-features = false, features = ["toml"] }
 serde = { version = "1", features = ["derive"]}
