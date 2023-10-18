@@ -5,7 +5,7 @@ include = [
     "src/**/*.rs",
     "*.md",
     "Cargo.toml",
-    "../migrations"
+    "migrations/**"
 ]
 license.workspace = true
 authors.workspace = true

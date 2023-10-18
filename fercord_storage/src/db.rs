@@ -41,7 +41,7 @@ pub async fn setup(url: &str) -> Result<AnyPool> {
 
 #[cfg(feature = "sqlite")]
 async fn run_migrations(pool: &AnyPool) -> Result<()> {
-    let migrations = sqlx::migrate!("../migrations/sqlite");
+    let migrations = sqlx::migrate!("migrations/sqlite");
 
     event!(Level::DEBUG, "Running any pending migrations");
     migrations.run(pool).await.with_context(|| "Error applying migrations")?;
@@ -51,7 +51,7 @@ async fn run_migrations(pool: &AnyPool) -> Result<()> {
 
 #[cfg(feature = "postgres")]
 async fn run_migrations(pool: &AnyPool) -> Result<()> {
-    let migrations = sqlx::migrate!("../migrations/postgres");
+    let migrations = sqlx::migrate!("migrations/postgres");
 
     event!(Level::DEBUG, "Running any pending migrations");
     migrations.run(pool).await.with_context(|| "Error applying migrations")?;
