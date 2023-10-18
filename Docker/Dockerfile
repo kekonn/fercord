@@ -1,4 +1,4 @@
-ARG RUST_VERSION=1.72.1
+ARG RUST_VERSION=1.73.0
 ARG APP_NAME=fercord
 
 FROM rust:${RUST_VERSION}-slim-bullseye AS builder
