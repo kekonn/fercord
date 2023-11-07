@@ -1,8 +1,7 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use poise::async_trait;
-use sqlx::{Any, AnyPool, FromRow, Row};
-use sqlx::any::AnyRow;
+use sqlx_oldapi::{Any, AnyPool, any::AnyRow, FromRow, Row};
 use tracing::{event, Level, trace};
 
 use crate::db::{Repo, Repository};
@@ -36,7 +35,7 @@ impl<'r> ReminderRepo<'r> {
         let now = Utc::now();
         event!(Level::TRACE, "Getting all reminders between {} and {}", &moment, &now);
 
-        let query = sqlx::query(REMINDERS_BETWEEN_QUERY)
+        let query = sqlx_oldapi::query(REMINDERS_BETWEEN_QUERY)
             .bind(moment)
             .bind(now)
             .fetch_all(self.pool).await?;
@@ -54,7 +53,7 @@ impl<'r> ReminderRepo<'r> {
     pub async fn get_reminders_before(&self, moment: &DateTime<Utc>) -> Result<Vec<Reminder>> {
         event!(Level::TRACE, "Getting all reminders before {}", &moment);
 
-        let query = sqlx::query(REMINDERS_BETWEEN_QUERY)
+        let query = sqlx_oldapi::query(REMINDERS_BETWEEN_QUERY)
             .bind(NaiveDateTime::UNIX_EPOCH)
             .bind(moment)
             .fetch_all(self.pool).await.with_context(|| "Error fetching expired reminders")?;
@@ -75,7 +74,7 @@ impl<'r> ReminderRepo<'r> {
 
         let trans = self.pool.begin().await.with_context(|| "Error starting transaction")?;
 
-        let query = sqlx::query(&BATCH_DELETE_QUERY.replace('?', reminder_ids))
+        let query = sqlx_oldapi::query(&BATCH_DELETE_QUERY.replace('?', reminder_ids))
             .execute(self.pool).await.with_context(|| "Error deleting reminders")?;
 
         event!(Level::DEBUG, "Deleted {} reminders", query.rows_affected());
@@ -100,7 +99,7 @@ impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
 
         let trans = self.pool.begin().await?;
 
-        let query = sqlx::query(INSERT_QUERY)
+        let query = sqlx_oldapi::query(INSERT_QUERY)
             .bind(db_ent.who)
             .bind(db_ent.when)
             .bind(db_ent.what)
@@ -118,7 +117,7 @@ impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
 
         let trans = self.pool.begin().await?;
 
-        sqlx::query(DELETE_QUERY)
+        sqlx_oldapi::query(DELETE_QUERY)
             .bind(entity.id)
             .execute(self.pool).await.with_context(|| "Error deleting reminder")?;
 
@@ -131,7 +130,7 @@ impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
     async fn get(&self, id: i64) -> Result<Option<Reminder>> {
         event!(Level::TRACE, "Retrieving Reminder with id {}", id);
 
-        if let Some(query) = sqlx::query_as::<Any, ReminderEntity>(GET_ONE_QUERY)
+        if let Some(query) = sqlx_oldapi::query_as::<Any, ReminderEntity>(GET_ONE_QUERY)
                 .bind(id)
                 .fetch_optional(self.pool).await.with_context(|| "Error getting Reminder with id")? {
                     Ok(Some(query.try_into().with_context(|| "Error converting entity to reminder")?))
@@ -151,7 +150,7 @@ impl Reminder {
 }
 
 /// Because a lot of our types are not supported by databases
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, FromRow)]
 struct ReminderEntity {
     pub id: i64,
     pub who: String,

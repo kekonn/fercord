@@ -15,14 +15,14 @@ default = ["fercord_storage/sqlite"]
 
 [dependencies]
 fercord_storage = { path = "../fercord_storage", version = "0.3"}
-poise = "0.5"
-config = { version = "0.13", default-features = false, features = ["toml"] }
-serde = { version = "1", features = ["derive"]}
-serde_json = "1"
-tracing = "0.1"
+poise = { workspace = true}
+config = { workspace = true}
+serde = { workspace = true}
+serde_json = { workspace = true}
+tracing = { workspace = true }
 tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
-chrono = "0.4"
-chrono-tz = "0.8"
+chrono = { workspace = true }
+chrono-tz = { workspace = true }
 chrono-english = "0.1"
 reqwest = { version = "0.11", features = ["stream", "rustls-tls"]}
 clap = { version = "4", features = ["derive", "env"] }

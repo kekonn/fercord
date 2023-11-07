@@ -8,7 +8,7 @@ use fercord_storage::config::DiscordConfig;
 use fercord_storage::db;
 use fercord_storage::prelude::{AnyPool, KVClient};
 
-use crate::{job::{Job, job_scheduler}};
+use crate::job::{Job, job_scheduler};
 use crate::cli::Commands;
 use crate::discord::commands::{reminder, timezone};
 use crate::healthchecks::perform_healthchecks;

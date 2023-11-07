@@ -5,6 +5,9 @@
 ## [Unreleased] - ReleaseDate
 - chore: Split single bin into workspace
 - chore: Update dependencies
+- chore: Update build docker to use rust v1.73.0
+- chore: Switch from sqlx to sqlx-oldapi
+- chore: Move some dependencies to workspace level
 
 ## [0.3.0] - 2023-10-03
 - chore: Update release pipeline
