@@ -16,23 +16,20 @@ version = "0.3.0"
 
 [features]
 default = ["sqlite"]
-sqlite = ["sqlx/sqlite"]
-postgres = ["sqlx/postgres"]
+sqlite = ["sqlx-oldapi/sqlite"]
+postgres = ["sqlx-oldapi/postgres"]
 
 [dependencies]
-poise = "0.5"
-config = { version = "0.13", default-features = false, features = ["toml"] }
-serde = { version = "1", features = ["derive"]}
+poise = { workspace = true}
+config = { workspace = true}
+serde = { workspace = true}
 async-trait = "0.1"
-serde_json = "1"
-tracing = "0.1"
+serde_json = { workspace = true }
+tracing = { workspace = true }
 tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
-chrono = "0.4"
-chrono-tz = "0.8"
-chrono-english = "0.1"
+chrono = { workspace = true }
+chrono-tz = { workspace = true }
 redis = { version = "0.23", features = ["tokio-comp", "json"] }
-reqwest = { version = "0.11", features = ["stream", "rustls-tls"]}
-clap = { version = "4", features = ["derive", "env"] }
 
 [dependencies.tokio]
 version = "1"
@@ -45,9 +42,9 @@ version = "0.1"
 version = "1"
 features = ["backtrace"]
 
-[dependencies.sqlx]
+[dependencies.sqlx-oldapi]
 version = "0.6"
-features = ["default", "chrono", "runtime-tokio-rustls", "any"]
+features = ["default", "chrono", "runtime-tokio-native-tls", "any"]
 
 [dependencies.uuid]
 version = "1"

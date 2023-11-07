@@ -16,7 +16,7 @@ pub mod config;
 
 /// fercord_storage prelude
 pub mod prelude {
-    pub use sqlx::any::AnyPool;
+    pub use sqlx_oldapi::any::AnyPool;
 
     pub use crate::config::DiscordConfig;
     pub use crate::db;
