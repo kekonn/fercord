@@ -1,20 +1,21 @@
-use std::sync::Arc;
 
 use chrono::{Duration, Utc};
 use poise::async_trait;
 use poise::serenity_prelude as serenity;
+
+
 use tracing::{debug_span, event, field, Level};
 
 use fercord_storage::prelude::model::reminder::*;
 
-use crate::{job::{Job, JobArgs, JobResult}};
+use crate::job::{Job, JobArgs, JobResult};
 
 struct RemindersJob;
 
 #[async_trait]
 impl Job for RemindersJob {
     
-    async fn run(&self, args: &Arc<JobArgs>) -> JobResult {
+    async fn run(&self, args: &JobArgs) -> JobResult {
         let span = debug_span!("fercord.jobs.reminders", reminder_id = field::Empty);
         let _enter = span.enter();
         
@@ -23,23 +24,20 @@ impl Job for RemindersJob {
 
         event!(Level::DEBUG, "Found {} reminders since {}", &expired_reminders.len(), &args.last_run_time);
 
-        let discord_client = &args.discord_client.http;
+        let discord_client = args.discord_client.http();
 
         for reminder in expired_reminders {
             // get discord client and send reminders
             span.record("reminder_id", field::display(reminder.id));
 
-            let typing = discord_client.start_typing(reminder.channel)?;
-            let user = discord_client.get_user(reminder.who).await?;
+            let channel: serenity::ChannelId = reminder.channel.into();
+            let user = discord_client.get_user(reminder.who.into()).await?;
             
-            let channel = serenity::ChannelId(reminder.channel);
-            if let Err(error) = channel.send_message(&discord_client, |m| {
-                m.content(format!("{} I was supposed to remind you of {}", serenity::Mention::from(user.id), reminder.what))
-            }).await {
+            let message = serenity::CreateMessage::new().content(format!("{} I was supposed to remind you of {}", serenity::Mention::from(user.id), reminder.what));
+            
+            if let Err(error) = channel.send_message(&discord_client,  message).await {
                 event!(Level::ERROR, %error, "Error sending reminder {}", &reminder.id);
             }
-
-            typing.stop();
         }
 
         Ok(())
@@ -50,7 +48,7 @@ struct RemindersCleanupJob;
 
 #[async_trait]
 impl Job for RemindersCleanupJob {
-    async fn run(&self, args: &Arc<JobArgs>) -> JobResult {
+    async fn run(&self, args: &JobArgs) -> JobResult {
         let discord_config = &args.discord_config;
         let job_interval = discord_config.job_interval_min;
 

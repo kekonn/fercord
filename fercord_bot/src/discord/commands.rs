@@ -32,7 +32,7 @@ pub async fn timezone(
         span.record("guild_id", tracing::field::debug(&guild_id));
 
         let guild_timezone = GuildTimezone {
-            guild_id: guild_id.0,
+            guild_id: guild_id.get(),
             timezone: timezone.clone(),
         };
 
@@ -129,9 +129,9 @@ pub async fn reminder(ctx: Context<'_>,
 
         let reminder = Reminder {
             id: 0, // will be ignored on insert
-            server: ctx.guild_id().unwrap().0,
-            channel: ctx.channel_id().0,
-            who: ctx.author().id.0,
+            server: ctx.guild_id().unwrap().into(),
+            channel: ctx.channel_id().into(),
+            who: ctx.author().id.into(),
             when: parsed_datetime.with_timezone(&Utc),
             what: what.clone(),
         };
@@ -157,7 +157,7 @@ pub async fn reminder(ctx: Context<'_>,
 
 async fn get_guild_timezone(client: &KVClient, guild_id: &serenity::GuildId) -> Result<Tz> {
     let kv_identity = GuildTimezone {
-        guild_id: guild_id.0,
+        guild_id: guild_id.get(),
         timezone: String::new(),
     };
 
