@@ -6,6 +6,7 @@
 - chore: Split single bin into workspace
 - chore: Update dependencies
 - chore: Move some dependencies to workspace level
+- chore: Update dependencies and adopt new version of Poise
 
 <!-- next-url -->
 [Unreleased]: https://github.com/kekonn/fercord/compare/v0.3.0...HEAD

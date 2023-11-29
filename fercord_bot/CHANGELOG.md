@@ -8,6 +8,7 @@
 - chore: Update build docker to use rust v1.73.0
 - chore: Switch from sqlx to sqlx-oldapi
 - chore: Move some dependencies to workspace level
+- chore: Update dependencies and adopt new version of Poise
 
 ## [0.3.0] - 2023-10-03
 - chore: Update release pipeline

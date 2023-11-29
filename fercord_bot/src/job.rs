@@ -4,10 +4,12 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use poise::async_trait;
 use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::CacheHttp;
 use serde::{Deserialize, Serialize};
 use tracing::{debug_span, event, field, info, Level};
 
 use fercord_storage::{db, kv::*, prelude::{AnyPool, DiscordConfig}};
+
 
 //pub type Job = Box<dyn Fn(&Arc<JobArgs>) -> JobResult>;
 pub(crate) type JobResult = anyhow::Result<()>;
@@ -15,20 +17,20 @@ pub(crate) type JobResult = anyhow::Result<()>;
 #[async_trait]
 pub trait Job {
 
-    async fn run(&self, args: &Arc<JobArgs>) -> JobResult;
+    async fn run(&self, args: &JobArgs) -> JobResult;
 }
 
-pub struct JobArgs {
+pub struct JobArgs<'j> {
     pub kv_client: Arc<KVClient>,
     pub db_pool: Arc<AnyPool>,
     pub last_run_time: DateTime<Utc>,
-    pub discord_client: Arc<serenity::CacheAndHttp>,
+    pub discord_client: Arc<dyn serenity::CacheHttp + 'j>,
     pub discord_config: DiscordConfig,
 }
 
-impl JobArgs {
+impl<'j> JobArgs<'j> {
     /// Create a new JobArgs struct from a `KVClient` and an sqlx Postgres pool.
-    fn new(kv_client: &Arc<KVClient>, db_pool: &Arc<AnyPool>, last_run_time: DateTime<Utc>, discord_client: &Arc<serenity::CacheAndHttp>, discord_config: DiscordConfig) -> Self {
+    fn new(kv_client: &Arc<KVClient>, db_pool: &Arc<AnyPool>, last_run_time: DateTime<Utc>, discord_client: &Arc<impl serenity::CacheHttp + 'j>, discord_config: DiscordConfig) -> Self {
         Self { kv_client: kv_client.clone(), db_pool: db_pool.clone(), last_run_time, discord_client: discord_client.clone(), discord_config }
     }
 }
@@ -55,11 +57,11 @@ impl Identifiable for JobState {
     }
 }
 
-pub(crate) async fn job_scheduler(
+pub(crate) async fn job_scheduler<'j>(
     app_config: &DiscordConfig,
     jobs: &Vec<Box<dyn Job>>,
     shard_key: &uuid::Uuid,
-    discord_client: &Arc<serenity::CacheAndHttp>,
+    discord_client: impl CacheHttp,
 ) -> Result<()> {
     let span = debug_span!("fercord.jobs.scheduler", shard_key = field::display(&shard_key));
     let _enter = span.enter();
@@ -85,6 +87,8 @@ pub(crate) async fn job_scheduler(
     let mut job_interval = tokio::time::interval_at(tokio::time::Instant::now(), interval_dur);
     job_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
+    let client_arc = Arc::new(discord_client);
+
     loop {
          // get last run time and compare to interval, sleep for difference or run immediately
         event!(Level::TRACE, "Retrieving last run state");
@@ -98,9 +102,10 @@ pub(crate) async fn job_scheduler(
         let mut failed_jobs = 0;
         let mut completed_jobs = 0;
 
+        let job_args = Arc::new(JobArgs::new(&kv_client, &db_pool, last_time_ran, &client_arc, app_config.clone()));
+
         for job in jobs {
 
-            let job_args = Arc::new(JobArgs::new(&kv_client, &db_pool, last_time_ran, discord_client, app_config.clone()));
             
             if let Err(e) = job.run(&job_args).await {
                 event!(Level::ERROR, "Encountered an error during a background job: {:?}", e);
