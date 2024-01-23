@@ -1,0 +1,45 @@
+[package]
+name = "fercord_api"
+version = "0.1.0"
+description = "Fercord's Web API"
+license.workspace = true
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+keywords.workspace = true
+
+[features]
+default = ["fercord_storage/sqlite"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+fercord_storage = { path = "../fercord_storage", version = "0.3"}
+actix-web = "4"
+serde = { workspace = true}
+serde_json = { workspace = true}
+tracing = { workspace = true }
+tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
+chrono = { workspace = true }
+chrono-tz = { workspace = true }
+chrono-english = "0.1"
+
+[dependencies.tokio]
+version = "1"
+features = ["rt-multi-thread", "time"]
+
+[dependencies.tokio-stream]
+version = "0.1"
+
+[dependencies.anyhow]
+version = "1"
+features = ["backtrace"]
+
+[dependencies.uuid]
+version = "1"
+features = [
+    "v4",                # Lets you generate random UUIDs
+    "fast-rng",          # Use a faster (but still sufficiently random) RNG
+    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+    "serde",             # Add serde support
+]

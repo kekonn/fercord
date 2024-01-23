@@ -5,6 +5,8 @@ use sqlx_oldapi::{any::AnyPoolOptions, AnyPool};
 use sqlx_oldapi::{migrate::MigrateDatabase, Sqlite};
 use tracing::{event, Level};
 
+pub type Pool = AnyPool;
+
 /// Create a database connection and run any pending migrations
 #[cfg(not(feature = "sqlite"))]
 pub async fn setup(url: &str) -> Result<AnyPool> {

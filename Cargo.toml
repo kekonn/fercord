@@ -1,5 +1,5 @@
 [workspace]
-members = ["fercord_storage", "fercord_bot"]
+members = ["fercord_storage", "fercord_bot", "fercord_api"]
 resolver = "2"
 
 [workspace.package]
