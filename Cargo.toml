@@ -13,7 +13,7 @@ repository = "https://github.com/kekonn/fercord"
 
 [workspace.dependencies]
 poise = "0.6"
-config = { version = "0.13", default-features = false, features = ["toml"] }
+config = { version = "0.14", default-features = false, features = ["toml"] }
 serde = { version = "1", features = ["derive"]}
 serde_json = "1"
 chrono = "0.4"
@@ -40,7 +40,7 @@ opt-level = 2
 # Config for 'cargo dist'
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.8.2"
+cargo-dist-version = "0.11.1"
 # CI backends to support
 ci = ["github"]
 # The installers to generate for each app
