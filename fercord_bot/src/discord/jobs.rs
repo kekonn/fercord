@@ -1,5 +1,6 @@
 
-use chrono::{Duration, Utc};
+use chrono::TimeDelta;
+use chrono::Utc;
 use poise::async_trait;
 use poise::serenity_prelude as serenity;
 
@@ -54,7 +55,7 @@ impl Job for RemindersCleanupJob {
 
         // now is now + job_interval because we don't need to delete immediately and we don't want the delete to complete before the reminder job.
         // TODO: This currently does not take into account pauses in the intervals because of maintenance etc. We should use a calculation that accounts for last_run_time
-        let now = Utc::now() - Duration::minutes((job_interval * 2) as i64);
+        let now = Utc::now() - TimeDelta::try_minutes((job_interval * 2) as i64).unwrap_or_default();
         let span = debug_span!("fercord.jobs.reminders_cleanup", cutoff_time = field::display(now));
         let _enter = span.enter();
 

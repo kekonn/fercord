@@ -54,7 +54,7 @@ impl KVClient {
             "Saving a record to the KV store"
         );
 
-        let con = &mut self.client.get_async_connection().await?;
+        let con = &mut self.client.get_multiplexed_async_connection().await?;
 
         let save_key = &record.kv_key();
         span.record("save_key", field::debug(&save_key));
@@ -85,7 +85,7 @@ impl KVClient {
 
         let json = serde_json::to_string(&record)?;
 
-        let con = &mut self.client.get_async_connection().await?;
+        let con = &mut self.client.get_multiplexed_async_connection().await?;
 
         let save_key = &record.kv_key();
         span.record("save_key", field::debug(&save_key));
@@ -117,7 +117,7 @@ impl KVClient {
 
         event!(Level::TRACE, "Retrieving a record from the kv store");
 
-        let con = &mut self.client.get_async_connection().await?;
+        let con = &mut self.client.get_multiplexed_async_connection().await?;
 
         if !con.exists(&key).await? {
             return Ok(None);
