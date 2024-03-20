@@ -3,8 +3,10 @@
 <!-- next-header -->
 
 ## [Unreleased] - ReleaseDate
+- chore: Update dependencies
 
 ## [0.3.2] - 2024-01-30
+- chore: Update dependencies
 
 ## [0.3.1] - 2023-11-29
 - chore: Split single bin into workspace
