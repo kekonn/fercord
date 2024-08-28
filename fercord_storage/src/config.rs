@@ -36,6 +36,8 @@ pub struct DiscordConfig {
     /// 
     /// Used when multiple servers share the same key-value store.
     pub shard_key: uuid::Uuid,
+    /// The path to the ggml file containing the LLM data.
+    pub llm_path: String,
 }
 
 const ENV_PREFIX: &str = "FERCORD";
@@ -125,6 +127,7 @@ mod tests {
             redis_url: "redis://localhost".into(),
             job_interval_min: 1,
             shard_key: uuid::uuid!("c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"),
+            llm_path: "".into(),
         };
 
         let config = DiscordConfig::from_file(TEST_CONFIG_PATH).unwrap();
@@ -143,6 +146,7 @@ mod tests {
             redis_url: "redis://localhost".into(),
             job_interval_min: 1,
             shard_key: uuid::uuid!("c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"),
+            llm_path: "".into(),
         };
 
         // Act
