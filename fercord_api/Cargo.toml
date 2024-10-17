@@ -22,6 +22,7 @@ tracing = { workspace = true }
 tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
+chrono-english = "0.1"
 
 [dependencies.tokio]
 version = "1"

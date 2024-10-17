@@ -1,18 +1,16 @@
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use clap::Parser;
-use llm::models::Llama;
 use poise::serenity_prelude::{self as serenity, ActivityData};
-use std::path::Path;
 use tracing::*;
 
 use fercord_storage::config::DiscordConfig;
 use fercord_storage::db;
-use fercord_storage::prelude::{AnyPool, KVClient};
+use fercord_storage::prelude::{ AnyPool, KVClient };
 
+use crate::job::{ Job, job_scheduler };
 use crate::cli::Commands;
-use crate::discord::commands::{reminder, timezone};
+use crate::discord::commands::{ reminder, timezone };
 use crate::healthchecks::perform_healthchecks;
-use crate::job::{job_scheduler, Job};
 
 mod job;
 mod cli;
@@ -23,7 +21,6 @@ pub struct ServerData {
     pub kv_client: KVClient,
     pub db_pool: AnyPool,
     pub config: DiscordConfig,
-    pub model: Llama,
 }
 
 #[tokio::main]
@@ -53,14 +50,6 @@ async fn main() -> anyhow::Result<()> {
     // KV Setup
     event!(Level::DEBUG, "Connecting to KV Store");
     let kv_client = KVClient::new(&config).with_context(|| "Error building redis client")?;
-    
-    // LLM Setup
-    event!(Level::DEBUG, "Setting up local LLM");
-    let model_path = Path::new(&config.llm_path);
-    if !model_path.exists() {
-        return Err(anyhow!("Could not load LLM model at path '{}'", model_path.to_string_lossy()));
-    }
-    let model = Llama::load(model_path, Default::default(), llm::load_progress_callback_stdout).with_context(|| format!("Error loading LLM model at path: {}", &config.llm_path))?;
 
     // Discord setup
     event!(Level::DEBUG, "Discord client setup");
@@ -81,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
                     ::register_globally(ctx, &framework.options().commands).await
                     .with_context(|| "Error creating Discord client")?;
 
-                Ok(ServerData { kv_client, db_pool, config: discord_config, model })
+                Ok(ServerData { kv_client, db_pool, config: discord_config })
             })
         })
         .build();

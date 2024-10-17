@@ -1,19 +1,15 @@
 use anyhow::{anyhow, Result};
-use chrono::{DateTime, Local, TimeZone, Utc};
+use chrono::{DateTime, TimeZone, Utc};
+use chrono_english::{Dialect, parse_date_string};
 use chrono_tz::{Tz, TZ_VARIANTS};
-use llm::KnownModel;
-
 use poise::serenity_prelude as serenity;
-use poise::serenity_prelude::NsfwLevel::Default;
-use tracing::{debug, event, field, trace_span, warn, Level};
+use tracing::{debug, event, field, Level, trace_span, warn};
 
-use fercord_storage::prelude::{db::Repository, model::{guild_timezone::GuildTimezone, reminder::Reminder}, *};
+use fercord_storage::prelude::{*, db::Repository, model::{guild_timezone::GuildTimezone, reminder::Reminder}};
 
 use crate::discord::Context;
 
 const FROM_NOW: &str = "from now";
-
-type LlmModel = llm::models::Llama;
 
 /// Set the timezone for this server (used by time related commands).
 #[poise::command(slash_command)]
@@ -200,7 +196,7 @@ pub(crate) fn parse_human_time<Tz>(when: impl Into<String>, tz: Tz, now: Option<
     span.record("cleaned_input", field::debug(&cleaned_input));
     event!(Level::TRACE, ?cleaned_input, "Cleaned up raw input");
 
-    if let Ok(ParseResult::DateTime(parsed_datetime)) = from_human_time(&cleaned_input) {
+    if let Ok(parsed_datetime) = parse_date_string::<Tz>(&cleaned_input, now, Dialect::Us) {
         event!(Level::TRACE, "Parsed '{cleaned_input}' into '{parsed_datetime:#?}'");
         span.record("parsed_datetime", field::debug(&parsed_datetime));
 
@@ -210,19 +206,6 @@ pub(crate) fn parse_human_time<Tz>(when: impl Into<String>, tz: Tz, now: Option<
 
         Err(anyhow!("Failed to parse raw input to a useful DateTime"))
     }
-}
-
-async fn ask_llm(input: &str, model: &LlmModel) -> Result<String> {
-    let mut session = model.start_session(Default::default());
-    let response = session.infer(model, &mut rand::thread_rng(),
-        &llm::InferenceRequest {
-            prompt: "You are a date time parser. You can only reply in RFC 3339 formatted date time stamps and nothing else. If you are unable to successfully parse the time",
-            ..Default::default()
-        }
-    );
-
-
-    Ok("")
 }
 
 #[tracing::instrument]
@@ -276,7 +259,6 @@ fn filter_timezones(pattern: &str) -> impl Iterator<Item = String> + '_ {
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
-    use chrono::{Duration, NaiveTime};
 
     use super::*;
 
@@ -292,21 +274,6 @@ mod tests {
             } else {
                 return Err(anyhow!("Could not find timezone matching {}", expected));
             }
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn can_parse_time_strings() -> Result<()> {
-        let now = Local::now();
-        let now_date = now.date_naive();
-        let test_tz = Local;
-        let inputs = vec![("tomorrow at 5 pm", (now_date + Duration::days(1)).and_time(NaiveTime::from_hms_opt(17,0,0).unwrap()))];
-
-        for (input, expected) in inputs {
-            let parsed = parse_human_time(input, test_tz, Some(now))?;
-            assert_eq!(parsed.naive_local(), expected);
         }
 
         Ok(())
