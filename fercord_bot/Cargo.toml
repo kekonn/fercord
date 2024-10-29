@@ -23,8 +23,8 @@ tracing = { workspace = true }
 tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
-chrono-english = "0.1"
-reqwest = { version = "0.11", features = ["stream", "rustls-tls"]}
+interim = { workspace = true }
+reqwest = { version = "0.12", features = ["stream", "rustls-tls"]}
 clap = { version = "4", features = ["derive", "env"] }
 
 [dependencies.tokio]

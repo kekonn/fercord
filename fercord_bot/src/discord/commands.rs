@@ -1,11 +1,11 @@
 use anyhow::{anyhow, Result};
-use chrono::{DateTime, TimeZone, Utc};
-use chrono_english::{Dialect, parse_date_string};
+use chrono::{DateTime, Utc};
 use chrono_tz::{Tz, TZ_VARIANTS};
+use interim::{parse_date_string, Dialect};
 use poise::serenity_prelude as serenity;
-use tracing::{debug, event, field, Level, trace_span, warn};
+use tracing::{debug, event, field, trace_span, warn, Level};
 
-use fercord_storage::prelude::{*, db::Repository, model::{guild_timezone::GuildTimezone, reminder::Reminder}};
+use fercord_storage::prelude::{db::Repository, model::{guild_timezone::GuildTimezone, reminder::Reminder}, *};
 
 use crate::discord::Context;
 
@@ -174,8 +174,7 @@ async fn get_guild_timezone(client: &KVClient, guild_id: &serenity::GuildId) -> 
 }
 
 pub(crate) fn parse_human_time<Tz>(when: impl Into<String>, tz: Tz, now: Option<DateTime<Tz>>) -> Result<DateTime<Tz>>
-    where Tz: TimeZone + Copy,
-    Tz::Offset: Copy
+    where Tz: chrono::TimeZone
 {
     let span = trace_span!(
         "discord.parse_human_time",
@@ -196,7 +195,7 @@ pub(crate) fn parse_human_time<Tz>(when: impl Into<String>, tz: Tz, now: Option<
     span.record("cleaned_input", field::debug(&cleaned_input));
     event!(Level::TRACE, ?cleaned_input, "Cleaned up raw input");
 
-    if let Ok(parsed_datetime) = parse_date_string::<Tz>(&cleaned_input, now, Dialect::Us) {
+    if let Ok(parsed_datetime) = parse_date_string(&cleaned_input, now.fixed_offset(), Dialect::Us) {
         event!(Level::TRACE, "Parsed '{cleaned_input}' into '{parsed_datetime:#?}'");
         span.record("parsed_datetime", field::debug(&parsed_datetime));
 
