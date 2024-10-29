@@ -21,6 +21,7 @@ pub async fn setup(url: &str) -> Result<AnyPool> {
 }
 
 #[cfg(feature = "sqlite")]
+#[tracing::instrument]
 pub async fn setup(url: &str) -> Result<AnyPool> {
     event!(Level::DEBUG, "Checking if database exists");
 
@@ -28,7 +29,7 @@ pub async fn setup(url: &str) -> Result<AnyPool> {
         event!(Level::DEBUG, "Could not find database, creating a new one");
         Sqlite::create_database(url).await.with_context(|| format!("Error creating sqlite database {}", url))?;
     } else {
-        event!(Level::DEBUG, "Databse {} already exists", url);
+        event!(Level::DEBUG, "Database {} already exists", url);
     }
 
     event!(Level::DEBUG, "Connecting to the database");
