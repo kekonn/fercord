@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 
 #[derive(Debug, Serialize)]
@@ -11,4 +11,16 @@ impl Default for HealthCheck {
     fn default() -> Self {
         Self { database: true, kv: true }
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DiscordOAuthResponse {
+    pub auth_code: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SessionData {
+    pub access_token: String,
+    pub expires_in: usize,
+    pub refresh_token: String,
 }

@@ -23,12 +23,13 @@ postgres = ["sqlx-oldapi/postgres"]
 poise = { workspace = true}
 config = { workspace = true}
 serde = { workspace = true}
-async-trait = "0.1"
 serde_json = { workspace = true }
 tracing = { workspace = true }
-tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
+tracing-subscriber = { workspace = true }
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
+fercord_common = { path = "../fercord_common", version = "0.1"}
+async-trait = "0.1"
 redis = { version = "0.27", features = ["tokio-comp", "json"] }
 
 [dependencies.tokio]

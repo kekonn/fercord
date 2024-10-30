@@ -1,7 +1,7 @@
 [package]
-name = "fercord_api"
+name = "fercord_common"
 version = "0.1.0"
-description = "Fercord's Web API"
+description = "Crate with common types used by the Fercord bot"
 license.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -9,37 +9,19 @@ repository.workspace = true
 keywords.workspace = true
 
 [features]
-default = ["fercord_storage/sqlite"]
+default = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-fercord_storage = { path = "../fercord_storage", version = "0.3"}
-fercord_common = { path = "../fercord_common", version = "0.1"}
-actix-web = "4"
-actix-session = { version = "0.10", features = ["default", "redis-session"]}
+config = { workspace = true}
 serde = { workspace = true}
 serde_json = { workspace = true}
 tracing = { workspace = true }
 tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
-chrono = { workspace = true }
-chrono-tz = { workspace = true }
+reqwest = { version = "0.12", features = ["stream", "rustls-tls"]}
+clap = { workspace = true }
 thiserror = { workspace = true }
-serenity = { version = "0.12", features = ["default", "chrono", "model"]}
-reqwest = { version = "0.12", features = ["default", "json"]}
-mime = "0.3"
-clap ={ workspace = true }
-
-[dependencies.tokio]
-version = "1"
-features = ["rt-multi-thread", "time"]
-
-[dependencies.tokio-stream]
-version = "0.1"
-
-[dependencies.anyhow]
-version = "1"
-features = ["backtrace"]
 
 [dependencies.uuid]
 version = "1"

@@ -4,6 +4,7 @@ use serde::Serialize;
 use tracing::{event, Level};
 
 use fercord_storage::prelude::*;
+use fercord_common::prelude::*;
 
 use crate::healthchecks::CheckType::Database;
 

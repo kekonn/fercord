@@ -1,4 +1,4 @@
-# Fercord bot changelog
+# Fercord API changelog
 
 <!-- next-header -->
 

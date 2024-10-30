@@ -8,8 +8,9 @@
 //! let config = DiscordConfig::from_env_and_file("../.config/config.toml").unwrap();
 //! ```
 
-use anyhow::{Context, Result};
 use tracing::{event, Level};
+
+pub use config::ConfigError;
 
 /// The application configuration.
 ///
@@ -20,6 +21,7 @@ use tracing::{event, Level};
 /// * `database_url`: `String`
 /// * `redis_url`: `String`
 /// * `job_interval_min`: `u32`
+/// * `session_key`: `String`
 #[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq, Clone)]
 pub struct DiscordConfig {
     /// The Discord API token.
@@ -36,6 +38,8 @@ pub struct DiscordConfig {
     /// 
     /// Used when multiple servers share the same key-value store.
     pub shard_key: uuid::Uuid,
+    /// Base64 encoded string of the secret session key. Key must be at least 64 bytes in length.
+    pub session_key: String,
 }
 
 const ENV_PREFIX: &str = "FERCORD";
@@ -46,27 +50,25 @@ impl DiscordConfig {
     /// This will read all variables prefixed with `FERCORD_` and try to serialize them into a `DiscordConfig`.
     #[allow(dead_code)]
     #[tracing::instrument]
-    pub fn from_env() -> Result<Self> {
+    pub fn from_env() -> Result<Self, ConfigError> {
         let builder =
             config::Config::builder().add_source(config::Environment::with_prefix(ENV_PREFIX));
 
         let config = builder
-            .build()
-            .with_context(|| "Error building Fercord configuration")?;
+            .build()?;
 
         config
             .try_deserialize::<DiscordConfig>()
-            .with_context(|| "Error deserializing configuration")
     }
 
     /// Create a configuration from the environment variables and the indicated file.
     ///
-    /// The file is prioritised and you can use the environment variables to overwrite certain file values.
+    /// The file is prioritised. You can use the environment variables to overwrite certain file values.
     ///
     /// For more info about how the environment variables are read, see [from_env()](#from_env).
     #[allow(dead_code)]
     #[tracing::instrument]
-    pub fn from_env_and_file(path: &str) -> Result<Self> {
+    pub fn from_env_and_file(path: &str) -> Result<Self, ConfigError> {
         event!(Level::DEBUG, "Building configuration from environment and file {}", path);
         
         let builder = config::Config::builder()
@@ -74,35 +76,30 @@ impl DiscordConfig {
             .add_source(config::Environment::with_prefix(ENV_PREFIX));
 
         let config = builder
-            .build()
-            .with_context(|| "Error building Fercord configuration")?;
+            .build()?;
 
         config
             .try_deserialize::<DiscordConfig>()
-            .with_context(|| "Error deserializing configuration")
     }
 
     /// Create a configuration from the given file.
     ///
     /// Only here to test the file loading without environment influence.
     #[cfg(test)]
-    fn from_file(path: &str) -> Result<Self> {
+    fn from_file(path: &str) -> Result<Self, ConfigError> {
         let builder = config::Config::builder().add_source(config::File::with_name(path));
 
         let config = builder
-            .build()
-            .with_context(|| "Error building Fercord configuration")?;
+            .build()?;
 
         config
             .try_deserialize::<DiscordConfig>()
-            .with_context(|| "Error deserializing configuration")
     }
 }
 
 impl Default for DiscordConfig {
     fn default() -> Self {
         Self::from_env()
-            .with_context(|| "Error creating config from environment")
             .unwrap()
     }
 }
@@ -125,6 +122,7 @@ mod tests {
             redis_url: "redis://localhost".into(),
             job_interval_min: 1,
             shard_key: uuid::uuid!("c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"),
+            session_key: "1hYw2n0+t8SDo+gqy+Q3x2SJ4u/Y6e6QPrMHExaQTHETOD8tlUsR2Cq66H0a2QuGBK7L1TIDhAupc3rHCbiehw==".into(),
         };
 
         let config = DiscordConfig::from_file(TEST_CONFIG_PATH).unwrap();
@@ -143,6 +141,7 @@ mod tests {
             redis_url: "redis://localhost".into(),
             job_interval_min: 1,
             shard_key: uuid::uuid!("c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"),
+            session_key: "1hYw2n0+t8SDo+gqy+Q3x2SJ4u/Y6e6QPrMHExaQTHETOD8tlUsR2Cq66H0a2QuGBK7L1TIDhAupc3rHCbiehw==".into(),
         };
 
         // Act

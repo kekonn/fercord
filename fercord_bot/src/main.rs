@@ -1,19 +1,16 @@
 use anyhow::Context;
-use clap::Parser;
 use poise::serenity_prelude::{self as serenity, ActivityData};
 use tracing::*;
 
-use fercord_storage::config::DiscordConfig;
 use fercord_storage::db;
-use fercord_storage::prelude::{ AnyPool, KVClient };
+use fercord_storage::prelude::*;
 
 use crate::job::{ Job, job_scheduler };
-use crate::cli::Commands;
+use fercord_common::{cli, cli::Commands, prelude::*};
 use crate::discord::commands::{ reminder, timezone };
 use crate::healthchecks::perform_healthchecks;
 
 mod job;
-mod cli;
 mod healthchecks;
 mod discord;
 

@@ -9,7 +9,7 @@ use redis::{AsyncCommands, Client, ConnectionLike, ToRedisArgs};
 use serde::{de::DeserializeOwned, Serialize};
 use tracing::*;
 
-use crate::config::DiscordConfig;
+use fercord_common::config::DiscordConfig;
 
 pub type KVIdentity = String;
 

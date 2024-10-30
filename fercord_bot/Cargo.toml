@@ -15,6 +15,7 @@ default = ["fercord_storage/sqlite"]
 
 [dependencies]
 fercord_storage = { path = "../fercord_storage", version = "0.3"}
+fercord_common ={ path = "../fercord_common", version = "0.1"}
 poise = { workspace = true}
 config = { workspace = true}
 serde = { workspace = true}
@@ -25,7 +26,6 @@ chrono = { workspace = true }
 chrono-tz = { workspace = true }
 interim = { workspace = true }
 reqwest = { version = "0.12", features = ["stream", "rustls-tls"]}
-clap = { version = "4", features = ["derive", "env"] }
 
 [dependencies.tokio]
 version = "1"
