@@ -42,7 +42,11 @@ pub struct DiscordConfig {
     ///
     /// This is used by the API.
     pub session_key: Option<String>,
-    /// Discord Client secret. For security reasons this can only be set from the environment.
+    /// Discord OAuth Client Id.
+    ///
+    /// This is used by the API
+    pub client_id: Option<String>,
+    /// Discord OAuth client secret. For security reasons this can only be set from the environment.
     ///
     /// This is used by the API.
     pub client_secret: Option<String>,
@@ -92,8 +96,9 @@ impl DiscordConfig {
     pub fn is_valid_api_config(&self) -> bool {
         let client_secret = self.client_secret.clone().is_some_and(|s| s.len() > 0);
         let session_key = self.session_key.clone().is_some_and(|s| s.len() >= 64);
+        let client_id = self.client_id.clone().is_some_and(|s| s.len() >= 18);
 
-        return client_secret && session_key;
+        client_secret && session_key && client_id
     }
 
     /// Create a configuration from the given file.
@@ -101,7 +106,9 @@ impl DiscordConfig {
     /// Only here to test the file loading without environment influence.
     #[cfg(test)]
     fn from_file(path: &str) -> Result<Self, ConfigError> {
-        let builder = config::Config::builder().add_source(config::File::with_name(path));
+        let builder = config::Config::builder()
+            .add_source(config::File::with_name(path))
+            .set_override::<&str, Option<String>>("client_secret", None)?;
 
         let config = builder.build()?;
 
@@ -135,6 +142,7 @@ mod tests {
             shard_key: uuid::uuid!("c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"),
             session_key: Some("1hYw2n0+t8SDo+gqy+Q3x2SJ4u/Y6e6QPrMHExaQTHETOD8tlUsR2Cq66H0a2QuGBK7L1TIDhAupc3rHCbiehw==".into()),
             client_secret: None,
+            client_id: Some("948517362313863198".into())
         };
 
         let config = DiscordConfig::from_file(TEST_CONFIG_PATH).unwrap();
@@ -155,6 +163,7 @@ mod tests {
             shard_key: uuid::uuid!("c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"),
             session_key: Some("1hYw2n0+t8SDo+gqy+Q3x2SJ4u/Y6e6QPrMHExaQTHETOD8tlUsR2Cq66H0a2QuGBK7L1TIDhAupc3rHCbiehw==".into()),
             client_secret: Some("supersecret".into()),
+            client_id: Some("948517362313863198".into())
         };
 
         // Act

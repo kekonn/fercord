@@ -4,3 +4,5 @@ redis_url = "redis://localhost"
 job_interval_min = 1
 shard_key = "c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"
 session_key = "1hYw2n0+t8SDo+gqy+Q3x2SJ4u/Y6e6QPrMHExaQTHETOD8tlUsR2Cq66H0a2QuGBK7L1TIDhAupc3rHCbiehw=="
+client_secret = "exposedsecret"
+client_id = "948517362313863198"

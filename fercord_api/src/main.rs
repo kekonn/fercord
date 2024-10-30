@@ -82,10 +82,12 @@ async fn discord_auth(
         return Ok(HttpResponse::BadRequest().json(ApiError::OAuthTokenInvalidLength));
     }
 
+    let config = config.get_ref().clone();
+
     let new_session: model::SessionData = discord::Client::try_from_auth_code(
         &discord_token,
-        &config.discord_token,
-        &config.client_secret,
+        &config.client_id.expect("client_id is required when running the API"),
+        &config.client_secret.expect("client_secret is required when running the API"),
     )
     .await
     .map_err(|e| ApiError::OAuthTokenExchangeError {
@@ -144,12 +146,13 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let kv = KVClient::new(&config).expect("Error constructing KV client");
-    let db = db::setup(&config.database_url)
+    let db = db::setup(&config.database_url.clone())
         .await
         .expect("Error constructing db pool");
     let session_key = Key::from(
         config
             .session_key
+            .as_ref()
             .expect("session_key is required in config when running the API")
             .as_bytes(),
     );

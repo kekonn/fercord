@@ -89,7 +89,7 @@ impl Client {
 
         let body = TokenExchangeRequest::new(
             code.into(),
-            "https://tuxgamer.nessie-arctic.ts.net/".into(),
+            "https://tuxgamer.nessie-arctic.ts.net/discord_auth".into(),
             client_id.clone(),
             client_secret.clone(),
         );
