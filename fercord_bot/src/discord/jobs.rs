@@ -1,9 +1,7 @@
-
 use chrono::TimeDelta;
 use chrono::Utc;
 use poise::async_trait;
 use poise::serenity_prelude as serenity;
-
 
 use tracing::{debug_span, event, field, Level};
 
@@ -15,15 +13,19 @@ struct RemindersJob;
 
 #[async_trait]
 impl Job for RemindersJob {
-    
     async fn run(&self, args: &JobArgs) -> JobResult {
         let span = debug_span!("fercord.jobs.reminders", reminder_id = field::Empty);
         let _enter = span.enter();
-        
+
         let repo: ReminderRepo = Reminder::repository(&args.db_pool);
         let expired_reminders = repo.get_reminders_since(&args.last_run_time).await?;
 
-        event!(Level::DEBUG, "Found {} reminders since {}", &expired_reminders.len(), &args.last_run_time);
+        event!(
+            Level::DEBUG,
+            "Found {} reminders since {}",
+            &expired_reminders.len(),
+            &args.last_run_time
+        );
 
         let discord_client = args.discord_client.http();
 
@@ -33,10 +35,14 @@ impl Job for RemindersJob {
 
             let channel: serenity::ChannelId = reminder.channel.into();
             let user = discord_client.get_user(reminder.who.into()).await?;
-            
-            let message = serenity::CreateMessage::new().content(format!("{} I was supposed to remind you of {}", serenity::Mention::from(user.id), reminder.what));
-            
-            if let Err(error) = channel.send_message(&discord_client,  message).await {
+
+            let message = serenity::CreateMessage::new().content(format!(
+                "{} I was supposed to remind you of {}",
+                serenity::Mention::from(user.id),
+                reminder.what
+            ));
+
+            if let Err(error) = channel.send_message(&discord_client, message).await {
                 event!(Level::ERROR, %error, "Error sending reminder {}", &reminder.id);
             }
         }
@@ -55,8 +61,12 @@ impl Job for RemindersCleanupJob {
 
         // now is now + job_interval because we don't need to delete immediately and we don't want the delete to complete before the reminder job.
         // TODO: This currently does not take into account pauses in the intervals because of maintenance etc. We should use a calculation that accounts for last_run_time
-        let now = Utc::now() - TimeDelta::try_minutes((job_interval * 2) as i64).unwrap_or_default();
-        let span = debug_span!("fercord.jobs.reminders_cleanup", cutoff_time = field::display(now));
+        let now =
+            Utc::now() - TimeDelta::try_minutes((job_interval * 2) as i64).unwrap_or_default();
+        let span = debug_span!(
+            "fercord.jobs.reminders_cleanup",
+            cutoff_time = field::display(now)
+        );
         let _enter = span.enter();
 
         event!(Level::DEBUG, "Starting reminder cleanup");

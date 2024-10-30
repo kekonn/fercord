@@ -3,8 +3,8 @@ use chrono::Utc;
 use serde::Serialize;
 use tracing::{event, Level};
 
-use fercord_storage::prelude::*;
 use fercord_common::prelude::*;
+use fercord_storage::prelude::*;
 
 use crate::healthchecks::CheckType::Database;
 
@@ -18,7 +18,7 @@ pub struct HealthCheck {
 #[derive(Debug, Serialize)]
 pub enum CheckType {
     Redis,
-    Database
+    Database,
 }
 
 pub async fn perform_healthchecks(config: &DiscordConfig) -> Result<String> {
@@ -28,8 +28,7 @@ pub async fn perform_healthchecks(config: &DiscordConfig) -> Result<String> {
 
     let db_check_start = Utc::now();
     event!(Level::TRACE, %db_check_start, "Starting DB Health check");
-    let db_result = db
-    ::setup(config.database_url.as_ref()).await;
+    let db_result = db::setup(config.database_url.as_ref()).await;
 
     if let Ok(pool) = db_result {
         let conn = pool.acquire().await;
@@ -38,7 +37,7 @@ pub async fn perform_healthchecks(config: &DiscordConfig) -> Result<String> {
         checks.push(HealthCheck {
             check_type: Database,
             time: (db_check_end - db_check_start).num_milliseconds(),
-            success: conn.is_ok()
+            success: conn.is_ok(),
         });
     } else {
         let db_check_end = Utc::now();
@@ -46,7 +45,7 @@ pub async fn perform_healthchecks(config: &DiscordConfig) -> Result<String> {
         checks.push(HealthCheck {
             check_type: Database,
             time: (db_check_end - db_check_start).num_milliseconds(),
-            success: db_result.is_ok()
+            success: db_result.is_ok(),
         });
     }
 
@@ -54,7 +53,7 @@ pub async fn perform_healthchecks(config: &DiscordConfig) -> Result<String> {
 
     let kv_check_start = Utc::now();
     event!(Level::TRACE, %kv_check_start, "Starting KV Health check");
-    let kv_result =  KVClient::new(config);
+    let kv_result = KVClient::new(config);
 
     if let Ok(kv_client) = kv_result {
         let conn_check = kv_client.connection_check().await;
@@ -64,7 +63,7 @@ pub async fn perform_healthchecks(config: &DiscordConfig) -> Result<String> {
         checks.push(HealthCheck {
             success: conn_check.is_ok(),
             check_type: CheckType::Redis,
-            time: (kv_check_end - kv_check_start).num_milliseconds()
+            time: (kv_check_end - kv_check_start).num_milliseconds(),
         })
     } else {
         let kv_check_end = Utc::now();
@@ -73,11 +72,11 @@ pub async fn perform_healthchecks(config: &DiscordConfig) -> Result<String> {
         checks.push(HealthCheck {
             success: false,
             check_type: CheckType::Redis,
-            time: (kv_check_end - kv_check_start).num_milliseconds()
+            time: (kv_check_end - kv_check_start).num_milliseconds(),
         })
     }
 
-    let result = serde_json::to_string_pretty(&checks).with_context(|| "Error serializing health check json")?;
+    let result = serde_json::to_string_pretty(&checks)
+        .with_context(|| "Error serializing health check json")?;
     Ok(result)
 }
-

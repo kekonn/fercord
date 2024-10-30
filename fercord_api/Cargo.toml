@@ -21,14 +21,14 @@ actix-session = { version = "0.10", features = ["default", "redis-session"]}
 serde = { workspace = true}
 serde_json = { workspace = true}
 tracing = { workspace = true }
-tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
+tracing-subscriber = { workspace = true}
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
 thiserror = { workspace = true }
 serenity = { version = "0.12", features = ["default", "chrono", "model"]}
 reqwest = { version = "0.12", features = ["default", "json"]}
 mime = "0.3"
-clap ={ workspace = true }
+clap = { workspace = true }
 
 [dependencies.tokio]
 version = "1"

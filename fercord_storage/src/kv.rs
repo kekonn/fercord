@@ -1,8 +1,8 @@
+use std::time::Duration;
 use std::{
     fmt::Debug,
     marker::{Send, Sync},
 };
-use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use redis::{AsyncCommands, Client, ConnectionLike, ToRedisArgs};
@@ -135,7 +135,9 @@ impl KVClient {
     /// Perform a connection check.
     /// If we can obtain an open connection in 15 seconds, we return `Ok()`.
     pub async fn connection_check(&self) -> Result<()> {
-        let connection_result = self.client.get_connection_with_timeout(Duration::from_secs(15));
+        let connection_result = self
+            .client
+            .get_connection_with_timeout(Duration::from_secs(15));
 
         match connection_result {
             Ok(conn) => {
@@ -144,8 +146,8 @@ impl KVClient {
                 } else {
                     Err(anyhow!("Could not open connection"))
                 }
-            },
-            Err(e) => Err(anyhow!(e))
+            }
+            Err(e) => Err(anyhow!(e)),
         }
     }
 }

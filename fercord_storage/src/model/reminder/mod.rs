@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use poise::async_trait;
-use sqlx_oldapi::{Any, AnyPool, any::AnyRow, FromRow, Row};
-use tracing::{event, Level, trace};
+use sqlx_oldapi::{any::AnyRow, Any, AnyPool, FromRow, Row};
+use tracing::{event, trace, Level};
 
 use crate::db::{Repo, Repository};
 #[cfg(feature = "postgres")]
@@ -29,16 +29,21 @@ pub struct Reminder {
 pub type ReminderRepo<'r> = Repo<'r>;
 
 impl<'r> ReminderRepo<'r> {
-
     /// Get all reminders between the given moment and now.
     pub async fn get_reminders_since(&self, moment: &DateTime<Utc>) -> Result<Vec<Reminder>> {
         let now = Utc::now();
-        event!(Level::TRACE, "Getting all reminders between {} and {}", &moment, &now);
+        event!(
+            Level::TRACE,
+            "Getting all reminders between {} and {}",
+            &moment,
+            &now
+        );
 
         let query = sqlx_oldapi::query(REMINDERS_BETWEEN_QUERY)
             .bind(moment)
             .bind(now)
-            .fetch_all(self.pool).await?;
+            .fetch_all(self.pool)
+            .await?;
 
         trace!("Found {} reminders", query.len());
 
@@ -56,7 +61,9 @@ impl<'r> ReminderRepo<'r> {
         let query = sqlx_oldapi::query(REMINDERS_BETWEEN_QUERY)
             .bind(NaiveDateTime::UNIX_EPOCH)
             .bind(moment)
-            .fetch_all(self.pool).await.with_context(|| "Error fetching expired reminders")?;
+            .fetch_all(self.pool)
+            .await
+            .with_context(|| "Error fetching expired reminders")?;
 
         Ok(query_to_entity(query))
     }
@@ -69,29 +76,42 @@ impl<'r> ReminderRepo<'r> {
             return Ok(());
         }
 
-        let reminder_ids = reminders.iter().fold(String::from(""), |s, r| s + r.id.to_string().as_str() + ",");
+        let reminder_ids = reminders
+            .iter()
+            .fold(String::from(""), |s, r| s + r.id.to_string().as_str() + ",");
         let reminder_ids = reminder_ids.trim_end_matches(',');
 
-        let trans = self.pool.begin().await.with_context(|| "Error starting transaction")?;
+        let trans = self
+            .pool
+            .begin()
+            .await
+            .with_context(|| "Error starting transaction")?;
 
         let query = sqlx_oldapi::query(&BATCH_DELETE_QUERY.replace('?', reminder_ids))
-            .execute(self.pool).await.with_context(|| "Error deleting reminders")?;
+            .execute(self.pool)
+            .await
+            .with_context(|| "Error deleting reminders")?;
 
         event!(Level::DEBUG, "Deleted {} reminders", query.rows_affected());
 
-        trans.commit().await.with_context(|| "Error committing transaction")
+        trans
+            .commit()
+            .await
+            .with_context(|| "Error committing transaction")
     }
 }
 
 /// Converts an iterator over `AnyRow`s into a vector of `Reminder`s
 fn query_to_entity(query: Vec<AnyRow>) -> Vec<Reminder> {
-    query.iter().map(|r| ReminderEntity::from_row(r).ok())
-        .filter_map(|o| o.and_then(|f| Reminder::try_from(f).ok())).collect()
+    query
+        .iter()
+        .map(|r| ReminderEntity::from_row(r).ok())
+        .filter_map(|o| o.and_then(|f| Reminder::try_from(f).ok()))
+        .collect()
 }
 
 #[async_trait]
 impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
-
     /// Inserts a reminder into the database and returns the id of the inserted record upon success.
     async fn insert(&self, entity: &Reminder) -> Result<i64> {
         event!(Level::TRACE, "Adding or updating entity {:?}", entity);
@@ -105,7 +125,9 @@ impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
             .bind(db_ent.what)
             .bind(db_ent.server)
             .bind(db_ent.channel)
-            .fetch_one(self.pool).await.with_context(|| "Error saving or updating entity")?;
+            .fetch_one(self.pool)
+            .await
+            .with_context(|| "Error saving or updating entity")?;
 
         trans.commit().await?;
         Ok(query.try_get(0)?)
@@ -119,7 +141,9 @@ impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
 
         sqlx_oldapi::query(DELETE_QUERY)
             .bind(entity.id)
-            .execute(self.pool).await.with_context(|| "Error deleting reminder")?;
+            .execute(self.pool)
+            .await
+            .with_context(|| "Error deleting reminder")?;
 
         trans.commit().await?;
 
@@ -131,18 +155,23 @@ impl<'r> Repository<Reminder, i64> for ReminderRepo<'r> {
         event!(Level::TRACE, "Retrieving Reminder with id {}", id);
 
         if let Some(query) = sqlx_oldapi::query_as::<Any, ReminderEntity>(GET_ONE_QUERY)
-                .bind(id)
-                .fetch_optional(self.pool).await.with_context(|| "Error getting Reminder with id")? {
-                    Ok(Some(query.try_into().with_context(|| "Error converting entity to reminder")?))
+            .bind(id)
+            .fetch_optional(self.pool)
+            .await
+            .with_context(|| "Error getting Reminder with id")?
+        {
+            Ok(Some(
+                query
+                    .try_into()
+                    .with_context(|| "Error converting entity to reminder")?,
+            ))
         } else {
             Ok(None)
         }
     }
-
 }
 
 impl Reminder {
-
     /// Create a `Reminder` repository that connects to the database with the borrowed pool.
     pub fn repository(pool: &AnyPool) -> ReminderRepo {
         Repo { pool }
@@ -162,7 +191,14 @@ struct ReminderEntity {
 
 impl From<&Reminder> for ReminderEntity {
     fn from(value: &Reminder) -> Self {
-        Self { id: value.id, who: value.who.to_string(), when: value.when, what: value.what.clone(), server: value.server.to_string(), channel: value.channel.to_string() }
+        Self {
+            id: value.id,
+            who: value.who.to_string(),
+            when: value.when,
+            what: value.what.clone(),
+            server: value.server.to_string(),
+            channel: value.channel.to_string(),
+        }
     }
 }
 
@@ -170,6 +206,13 @@ impl TryFrom<ReminderEntity> for Reminder {
     type Error = anyhow::Error;
 
     fn try_from(value: ReminderEntity) -> Result<Self> {
-        Ok(Self { id: value.id, who: value.who.parse()?, when: value.when, what: value.what, server: value.server.parse()?, channel: value.channel.parse()? })
+        Ok(Self {
+            id: value.id,
+            who: value.who.parse()?,
+            when: value.when,
+            what: value.what,
+            server: value.server.parse()?,
+            channel: value.channel.parse()?,
+        })
     }
 }

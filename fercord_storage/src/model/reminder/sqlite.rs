@@ -1,4 +1,3 @@
-
 pub(super) const REMINDERS_BETWEEN_QUERY: &str = r#"SELECT *
 FROM reminders
 WHERE unixepoch("when") >= unixepoch(?) and unixepoch("when") < unixepoch(?)

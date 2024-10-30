@@ -5,7 +5,11 @@ use interim::{parse_date_string, Dialect};
 use poise::serenity_prelude as serenity;
 use tracing::{debug, event, field, trace_span, warn, Level};
 
-use fercord_storage::prelude::{db::Repository, model::{guild_timezone::GuildTimezone, reminder::Reminder}, *};
+use fercord_storage::prelude::{
+    db::Repository,
+    model::{guild_timezone::GuildTimezone, reminder::Reminder},
+    *,
+};
 
 use crate::discord::Context;
 
@@ -15,7 +19,9 @@ const FROM_NOW: &str = "from now";
 #[poise::command(slash_command)]
 pub async fn timezone(
     ctx: Context<'_>,
-    #[autocomplete = "autocomplete_timezone"] #[description = "The IANA name of the timezone. Type the first 3 letters of the timezone to autocomplete."] timezone: String
+    #[autocomplete = "autocomplete_timezone"]
+    #[description = "The IANA name of the timezone. Type the first 3 letters of the timezone to autocomplete."]
+    timezone: String,
 ) -> Result<()> {
     let span = trace_span!(
         "fercord.discord.timezone",
@@ -46,7 +52,8 @@ pub async fn timezone(
                     Level::DEBUG,
                     "Successfully set the timezone for this server"
                 );
-                ctx.say(format!("Set timezone {} for the server.", &timezone)).await?;
+                ctx.say(format!("Set timezone {} for the server.", &timezone))
+                    .await?;
 
                 Ok(())
             }
@@ -72,9 +79,11 @@ pub async fn timezone(
 /// * when: When to remind you
 /// * what: What to remind you of
 #[poise::command(slash_command)]
-pub async fn reminder(ctx: Context<'_>,
-                    #[description = "When should I remind you?"]  when: String,
-                    #[description = "What should I remind you of?"]  what: String) -> Result<()> {
+pub async fn reminder(
+    ctx: Context<'_>,
+    #[description = "When should I remind you?"] when: String,
+    #[description = "What should I remind you of?"] what: String,
+) -> Result<()> {
     let span = trace_span!(
         "fercord.discord.reminder",
         guild_id = field::Empty,
@@ -113,7 +122,11 @@ pub async fn reminder(ctx: Context<'_>,
         }
     };
 
-    if let Ok(parsed_datetime) = parse_human_time(&when, guild_timezone, Some(now.with_timezone(&guild_timezone))) {
+    if let Ok(parsed_datetime) = parse_human_time(
+        &when,
+        guild_timezone,
+        Some(now.with_timezone(&guild_timezone)),
+    ) {
         event!(
             Level::TRACE,
             ?parsed_datetime,
@@ -124,7 +137,10 @@ pub async fn reminder(ctx: Context<'_>,
         let min_duration = user_data.config.job_interval_min as i64;
         let interval = parsed_datetime.signed_duration_since(now);
         if interval.num_minutes() < min_duration {
-            return Err(anyhow!("The minimum amount of time for a reminder is {} minute.", min_duration));
+            return Err(anyhow!(
+                "The minimum amount of time for a reminder is {} minute.",
+                min_duration
+            ));
         }
 
         let reminder = Reminder {
@@ -141,15 +157,15 @@ pub async fn reminder(ctx: Context<'_>,
 
         event!(Level::TRACE, "Saved event with id {}", id);
 
-        ctx.say(
-            format!(
-                "Got it! I will remind you at {} about {}",
-                parsed_datetime.format("%d/%m/%Y %H:%M"),
-                what
-            )
-        ).await?;
+        ctx.say(format!(
+            "Got it! I will remind you at {} about {}",
+            parsed_datetime.format("%d/%m/%Y %H:%M"),
+            what
+        ))
+        .await?;
     } else {
-        ctx.say(format!("What the hell am I supposed to make of {when}?!")).await?;
+        ctx.say(format!("What the hell am I supposed to make of {when}?!"))
+            .await?;
     }
 
     Ok(())
@@ -169,12 +185,18 @@ async fn get_guild_timezone(client: &KVClient, guild_id: &serenity::GuildId) -> 
 
     guild_timezone
         .unwrap()
-        .timezone.parse::<Tz>()
+        .timezone
+        .parse::<Tz>()
         .map_err(|e| anyhow!(e))
 }
 
-pub(crate) fn parse_human_time<Tz>(when: impl Into<String>, tz: Tz, now: Option<DateTime<Tz>>) -> Result<DateTime<Tz>>
-    where Tz: chrono::TimeZone
+pub(crate) fn parse_human_time<Tz>(
+    when: impl Into<String>,
+    tz: Tz,
+    now: Option<DateTime<Tz>>,
+) -> Result<DateTime<Tz>>
+where
+    Tz: chrono::TimeZone,
 {
     let span = trace_span!(
         "discord.parse_human_time",
@@ -195,13 +217,20 @@ pub(crate) fn parse_human_time<Tz>(when: impl Into<String>, tz: Tz, now: Option<
     span.record("cleaned_input", field::debug(&cleaned_input));
     event!(Level::TRACE, ?cleaned_input, "Cleaned up raw input");
 
-    if let Ok(parsed_datetime) = parse_date_string(&cleaned_input, now.fixed_offset(), Dialect::Us) {
-        event!(Level::TRACE, "Parsed '{cleaned_input}' into '{parsed_datetime:#?}'");
+    if let Ok(parsed_datetime) = parse_date_string(&cleaned_input, now.fixed_offset(), Dialect::Us)
+    {
+        event!(
+            Level::TRACE,
+            "Parsed '{cleaned_input}' into '{parsed_datetime:#?}'"
+        );
         span.record("parsed_datetime", field::debug(&parsed_datetime));
 
         Ok(parsed_datetime.with_timezone(&tz))
     } else {
-        event!(Level::TRACE, "Failed to parse raw input to a useful DateTime");
+        event!(
+            Level::TRACE,
+            "Failed to parse raw input to a useful DateTime"
+        );
 
         Err(anyhow!("Failed to parse raw input to a useful DateTime"))
     }
@@ -227,31 +256,29 @@ pub(crate) fn clean_input(natural_input: String) -> String {
 /// Autocomplete renderer for the timezones list.
 async fn autocomplete_timezone<'a>(
     _ctx: Context<'_>,
-    partial: &str
+    partial: &str,
 ) -> impl Iterator<Item = String> {
     let timezones: Vec<String> = filter_timezones(partial).collect();
     match timezones.len() {
         1..=100 => timezones.into_iter(),
         101.. => timezones.chunks(100).next().unwrap().to_vec().into_iter(),
-        _ =>
-            vec![
-                String::from(
-                    "Please type the first 3 characters of your timezone to start a search"
-                )
-            ].into_iter(),
+        _ => vec![String::from(
+            "Please type the first 3 characters of your timezone to start a search",
+        )]
+        .into_iter(),
     }
 }
 
 fn filter_timezones(pattern: &str) -> impl Iterator<Item = String> + '_ {
     let lower_pattern = pattern.to_lowercase();
-    TZ_VARIANTS.iter()
-        .filter_map(move |tz|
-            tz
-                .name()
+    TZ_VARIANTS
+        .iter()
+        .filter_map(move |tz| {
+            tz.name()
                 .to_lowercase()
                 .find(&lower_pattern)
                 .map(|_| tz.name())
-        )
+        })
         .map(|tz| tz.to_string())
 }
 
@@ -269,7 +296,11 @@ mod tests {
             let found: Vec<String> = filter_timezones(search).collect();
 
             if let Some(found_tz) = found.first() {
-                assert_eq!(expected, *found_tz, "Found timezone does not match expected {}", expected);
+                assert_eq!(
+                    expected, *found_tz,
+                    "Found timezone does not match expected {}",
+                    expected
+                );
             } else {
                 return Err(anyhow!("Could not find timezone matching {}", expected));
             }
