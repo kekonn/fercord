@@ -14,20 +14,12 @@ default = []
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-config = { workspace = true}
+figment = { version = "0.10", features = ["env", "toml", "test"]}
 serde = { workspace = true}
 serde_json = { workspace = true}
 tracing = { workspace = true }
 tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
-reqwest = { version = "0.12", features = ["stream", "rustls-tls"]}
+reqwest = { workspace = true }
 clap = { workspace = true }
 thiserror = { workspace = true }
-
-[dependencies.uuid]
-version = "1"
-features = [
-    "v4",                # Lets you generate random UUIDs
-    "fast-rng",          # Use a faster (but still sufficiently random) RNG
-    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
-    "serde",             # Add serde support
-]
+uuid = { workspace = true }

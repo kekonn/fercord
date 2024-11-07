@@ -1,12 +1,19 @@
 use actix_session::{storage::RedisSessionStore, Session, SessionMiddleware};
 use actix_web::cookie::Key;
-use actix_web::http::header::{ContentType, TryIntoHeaderValue};
-use actix_web::{get, post, web, App, HttpRequest, HttpResponse, HttpServer, Responder, Result};
+use actix_web::http::header::TryIntoHeaderValue;
+use actix_web::http::{header, StatusCode};
+use actix_web::{
+    get, http, middleware, post, web, App, HttpRequest, HttpResponse, HttpResponseBuilder,
+    HttpServer, Responder, Result,
+};
 use anyhow::{anyhow, bail};
 use serde::{Deserialize, Serialize};
-use serenity::all::StatusCode;
+use std::net::Ipv4Addr;
 use thiserror::Error;
-use tracing::{event, Level};
+use tracing::{event, trace_span, Level};
+use utoipa::{OpenApi, ToSchema};
+use utoipa_actix_web::{scope, AppExt};
+use utoipa_scalar::{Scalar, Servable};
 
 use fercord_common::{cli, prelude::*};
 use fercord_storage::{db::Pool, prelude::*};
@@ -15,21 +22,41 @@ use crate::model::HealthCheck;
 
 mod discord;
 mod model;
+mod util;
 
-const SESSION_DATA_KEY: &str = "session_data";
+pub(crate) const SESSION_DATA_KEY: &str = "session_data";
+pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub(crate) const REPO_URL: &str = env!("CARGO_PKG_REPOSITORY");
 
-#[derive(Error, Debug, Serialize, Deserialize)]
+mod tags {
+    pub const AUTHENTICATION: &str = "Authentication";
+    pub const V1: &str = "v1";
+    pub const UTILITY: &str = "Utility";
+}
+
+#[derive(OpenApi)]
+#[openapi(
+    info(description = "The Fercord management backend and REST api", title = "Fercord REST Api"),
+)]
+struct ApiDoc;
+
+#[derive(Error, Debug, Serialize, Deserialize, ToSchema)]
 pub enum ApiError {
     #[error("Received an OAuth token of invalid length")]
     OAuthTokenInvalidLength,
-    #[error("An error occurred during token exchange: {}", reason)]
-    OAuthTokenExchangeError { reason: String },
+    #[error("An error occurred during token exchange: {0}")]
+    OAuthTokenExchangeError(String),
+    #[error("Please visit /discord_auth to authenticate.")]
+    Unauthorized,
+    #[error("An unexpected error occurred: {0}")]
+    ServerError(String),
 }
 
 impl actix_web::ResponseError for ApiError {
-    fn status_code(&self) -> serenity::all::StatusCode {
+    fn status_code(&self) -> StatusCode {
         match self {
             Self::OAuthTokenInvalidLength => StatusCode::BAD_REQUEST,
+            &Self::Unauthorized => StatusCode::UNAUTHORIZED,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -51,6 +78,13 @@ impl actix_web::ResponseError for ApiError {
     }
 }
 
+#[utoipa::path(get,
+    tag = tags::UTILITY,
+    responses(
+        (status = OK, description = "Retrieved the health check data successfully", body = HealthCheck)
+    )
+)]
+#[get("/healthz")]
 #[tracing::instrument(name = "api.health")]
 async fn health_check(
     _req: HttpRequest,
@@ -60,14 +94,19 @@ async fn health_check(
     let db_res = db.acquire().await;
     let kv_res = kv.connection_check().await;
 
-    Ok(HttpResponse::Ok()
-        .content_type(ContentType::json())
-        .json(HealthCheck {
-            database: db_res.is_ok(),
-            kv: kv_res.is_ok(),
-        }))
+    Ok(HttpResponse::Ok().json(HealthCheck {
+        database: db_res.is_ok(),
+        kv: kv_res.is_ok(),
+    }))
 }
 
+#[utoipa::path(
+    tag = tags::AUTHENTICATION,
+    responses(
+        (status = 200, description = "User has successfully authenticated with Fercord"),
+        (status = 500, description = "An error occurred during the authentication", body = ApiError, content_type = mime::APPLICATION_JSON.to_string())
+    )
+)]
 #[get("/discord_auth")]
 #[tracing::instrument(name = "api.discord.auth", level = "trace", skip_all)]
 async fn discord_auth(
@@ -84,25 +123,25 @@ async fn discord_auth(
 
     let config = config.get_ref().clone();
 
-    let new_session: model::SessionData = discord::Client::try_from_auth_code(
+    let new_session: model::DiscordSessionData = discord::Client::try_from_auth_code(
         &discord_token,
-        &config.client_id.expect("client_id is required when running the API"),
-        &config.client_secret.expect("client_secret is required when running the API"),
+        config
+            .client_id
+            .expect("client_id is required when running the API"),
+        &config
+            .client_secret
+            .expect("client_secret is required when running the API"),
     )
     .await
-    .map_err(|e| ApiError::OAuthTokenExchangeError {
-        reason: e.to_string(),
-    })?
+    .map_err(|e| ApiError::OAuthTokenExchangeError(e.to_string()))?
     .into();
     if let Some(session_data) = session
-        .get::<model::SessionData>(SESSION_DATA_KEY)
-        .map_err(|e| ApiError::OAuthTokenExchangeError {
-            reason: e.to_string(),
-        })?
+        .get::<model::DiscordSessionData>(SESSION_DATA_KEY)
+        .map_err(|e| ApiError::OAuthTokenExchangeError(e.to_string()))?
     {
         event!(Level::TRACE, "Session contained existing session data");
 
-        if new_session.expires_in > session_data.expires_in {
+        if new_session.expires_in <= session_data.expires_in {
             event!(
                 Level::DEBUG,
                 "Newer token is more up to date, overwriting old sessions data..."
@@ -122,7 +161,40 @@ async fn discord_auth(
         session.insert(SESSION_DATA_KEY, new_session)?;
     }
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::TemporaryRedirect()
+        .insert_header((header::LOCATION, "/"))
+        .finish())
+}
+
+#[utoipa::path(
+    tag = tags::AUTHENTICATION,
+    responses(
+        (status = 200, description = "Logs out the current user")
+    )
+)]
+#[get("/logout")]
+async fn logout(session: Session) -> Result<impl Responder> {
+    event!(Level::DEBUG, "Removing session data");
+    let _ = session.remove(SESSION_DATA_KEY);
+
+    // TODO: Rescind token
+
+    Ok(HttpResponse::Ok())
+}
+
+#[utoipa::path(
+    tag = tags::V1,
+    responses(
+        (status = 200, description = "All user data Discord shares with the API", body = model::AuthorizedIdentity, content_type = mime::APPLICATION_JSON.to_string()),
+        (status = 401, description = "Please log in first")
+    )
+)]
+#[get("/identify")]
+async fn identify(discord_client: discord::Client) -> Result<impl Responder> {
+
+    let user_data = discord_client.get_user_identity().await?;
+
+    Ok(web::Json(user_data))
 }
 
 #[actix_web::main]
@@ -161,18 +233,31 @@ async fn main() -> anyhow::Result<()> {
         .expect("Error creating redis session store");
 
     HttpServer::new(move || {
-        App::new()
+        let (app, _) = App::new()
+            .into_utoipa_app()
+            .openapi(ApiDoc::openapi())
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(kv.clone()))
             .app_data(web::Data::new(db.clone()))
-            .wrap(SessionMiddleware::new(
-                redis_session_store.clone(),
-                session_key.clone(),
-            ))
+            .map(|app| {
+                app.wrap(SessionMiddleware::new(
+                    redis_session_store.clone(),
+                    session_key.clone(),
+                ))
+            })
+            .map(|app| app.wrap(middleware::Compress::default()))
             .service(discord_auth)
-            .route("/healthz", web::get().to(health_check))
+            .service(logout)
+            .service(health_check)
+            .service(scope::scope("/api").service(scope::scope("/v1").service(identify)))
+            .openapi_service(|api| {
+                Scalar::with_url("/docs", api)
+            })
+            .split_for_parts();
+
+        app.service(web::redirect("/", "/docs"))
     })
-    .bind(("0.0.0.0", 8888))?
+    .bind((Ipv4Addr::UNSPECIFIED, 8888))?
     .run()
     .await
     .map_err(|e| anyhow!(e))

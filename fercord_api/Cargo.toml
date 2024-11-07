@@ -14,10 +14,8 @@ default = ["fercord_storage/sqlite"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-fercord_storage = { path = "../fercord_storage", version = "0.3"}
-fercord_common = { path = "../fercord_common", version = "0.1"}
-actix-web = "4"
-actix-session = { version = "0.10", features = ["default", "redis-session"]}
+fercord_storage = { workspace = true }
+fercord_common = { workspace = true }
 serde = { workspace = true}
 serde_json = { workspace = true}
 tracing = { workspace = true }
@@ -25,27 +23,16 @@ tracing-subscriber = { workspace = true}
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
 thiserror = { workspace = true }
-serenity = { version = "0.12", features = ["default", "chrono", "model"]}
-reqwest = { version = "0.12", features = ["default", "json"]}
+reqwest = { workspace = true, features = ["json"]}
 mime = "0.3"
 clap = { workspace = true }
+uuid = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+serenity = { version = "0.12", features = ["default", "chrono", "model"]}
+actix-web = "4"
+actix-session = { version = "0.10", features = ["default", "redis-session"]}
+utoipa = { version = "5", features = ["default", "chrono", "actix_extras", "uuid"]}
+utoipa-scalar = { version = "0.2", features = ["actix-web"]}
+utoipa-actix-web = "0.1"
 
-[dependencies.tokio]
-version = "1"
-features = ["rt-multi-thread", "time"]
-
-[dependencies.tokio-stream]
-version = "0.1"
-
-[dependencies.anyhow]
-version = "1"
-features = ["backtrace"]
-
-[dependencies.uuid]
-version = "1"
-features = [
-    "v4",                # Lets you generate random UUIDs
-    "fast-rng",          # Use a faster (but still sufficiently random) RNG
-    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
-    "serde",             # Add serde support
-]

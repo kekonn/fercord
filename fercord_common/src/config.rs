@@ -8,9 +8,12 @@
 //! let config = DiscordConfig::from_env_and_file("../.config/config.toml").unwrap();
 //! ```
 
+use std::num::NonZeroU64;
+
 use tracing::{event, Level};
 
-pub use config::ConfigError;
+pub use figment::Error;
+use figment::{providers::{Env, Format, Toml}, Figment};
 
 /// The application configuration.
 ///
@@ -22,6 +25,8 @@ pub use config::ConfigError;
 /// * `redis_url`: `String`
 /// * `job_interval_min`: `u32`
 /// * `session_key`: `String`
+/// * `client_id`: `NonZeroU64`
+/// * `client_secret`: `String`
 #[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq, Clone)]
 pub struct DiscordConfig {
     /// The Discord API token.
@@ -45,14 +50,14 @@ pub struct DiscordConfig {
     /// Discord OAuth Client Id.
     ///
     /// This is used by the API
-    pub client_id: Option<String>,
+    pub client_id: Option<NonZeroU64>,
     /// Discord OAuth client secret. For security reasons this can only be set from the environment.
     ///
     /// This is used by the API.
     pub client_secret: Option<String>,
 }
 
-const ENV_PREFIX: &str = "FERCORD";
+const ENV_PREFIX: &str = "FERCORD_";
 
 impl DiscordConfig {
     /// Create a configuration just from environment variables.
@@ -60,13 +65,11 @@ impl DiscordConfig {
     /// This will read all variables prefixed with `FERCORD_` and try to serialize them into a `DiscordConfig`.
     #[allow(dead_code)]
     #[tracing::instrument]
-    pub fn from_env() -> Result<Self, ConfigError> {
-        let builder =
-            config::Config::builder().add_source(config::Environment::with_prefix(ENV_PREFIX));
+    pub fn from_env() -> Result<Self, Error> {
+        let figment = Figment::new()
+            .merge(Env::prefixed(ENV_PREFIX));
 
-        let config = builder.build()?;
-
-        config.try_deserialize::<DiscordConfig>()
+        figment.extract()
     }
 
     /// Create a configuration from the environment variables and the indicated file.
@@ -76,43 +79,34 @@ impl DiscordConfig {
     /// For more info about how the environment variables are read, see [from_env()](#from_env).
     #[allow(dead_code)]
     #[tracing::instrument]
-    pub fn from_env_and_file(path: &str) -> Result<Self, ConfigError> {
+    pub fn from_env_and_file(path: &str) -> Result<Self, Error> {
         event!(
             Level::DEBUG,
             "Building configuration from environment and file {}",
             path
         );
 
-        let builder = config::Config::builder()
-            .add_source(config::File::with_name(path))
-            .add_source(config::Environment::with_prefix(ENV_PREFIX));
+        let file_figment = Figment::new()
+            .merge(Toml::file_exact(path));
 
-        let config = builder.build()?;
+        if let Ok(_) = file_figment.extract_inner::<String>("client_secret") {
+            return Err(Error::from("Setting client secret is not allowed from a config file"));
+        }
 
-        config.try_deserialize::<DiscordConfig>()
+        let env_figment = Figment::new()
+            .merge(Env::prefixed(ENV_PREFIX));
+
+
+        file_figment.merge(env_figment).extract()
     }
 
     /// Checks if all the required fields are set in the configuration that the API server
     pub fn is_valid_api_config(&self) -> bool {
-        let client_secret = self.client_secret.clone().is_some_and(|s| s.len() > 0);
+        let client_secret = self.client_secret.clone().is_some_and(|s| !s.is_empty());
         let session_key = self.session_key.clone().is_some_and(|s| s.len() >= 64);
-        let client_id = self.client_id.clone().is_some_and(|s| s.len() >= 18);
+        let client_id = self.client_id.clone().is_some();
 
         client_secret && session_key && client_id
-    }
-
-    /// Create a configuration from the given file.
-    ///
-    /// Only here to test the file loading without environment influence.
-    #[cfg(test)]
-    fn from_file(path: &str) -> Result<Self, ConfigError> {
-        let builder = config::Config::builder()
-            .add_source(config::File::with_name(path))
-            .set_override::<&str, Option<String>>("client_secret", None)?;
-
-        let config = builder.build()?;
-
-        config.try_deserialize::<DiscordConfig>()
     }
 }
 
@@ -126,62 +120,88 @@ impl Default for DiscordConfig {
 mod tests {
     //! Tests are run with the working directory set to the work space, not the directory of the source file.
 
-    use std::env;
-
     use super::*;
 
-    const TEST_CONFIG_PATH: &str = "../.testdata/basic_config.toml";
+    const TEST_CONFIG_EXPOSED: &str = r#"
+            discord_token = "111"
+            database_url = "sqlite://:memory:"
+            redis_url = "redis://localhost"
+            job_interval_min = 1
+            shard_key = "c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"
+            session_key = "1hYw2n0+t8SDo+gqy+Q3x2SJ4u/Y6e6QPrMHExaQTHETOD8tlUsR2Cq66H0a2QuGBK7L1TIDhAupc3rHCbiehw=="
+            client_secret = "exposedsecret"
+            client_id = 948517362313863198
+            "#;
+
+    const TEST_CONFIG: &str = r#"
+            discord_token = "111"
+            database_url = "sqlite://:memory:"
+            redis_url = "redis://localhost"
+            job_interval_min = 1
+            shard_key = "c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"
+            session_key = "1hYw2n0+t8SDo+gqy+Q3x2SJ4u/Y6e6QPrMHExaQTHETOD8tlUsR2Cq66H0a2QuGBK7L1TIDhAupc3rHCbiehw=="
+            client_id = 948517362313863198
+            "#;
+
+    #[test]
+    fn error_when_secret_in_file() {
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("config.toml", TEST_CONFIG_EXPOSED)?;
+
+            DiscordConfig::from_env_and_file("config.toml").expect_err("This should have thrown an error");
+
+            Ok(())
+        })
+    }
 
     #[test]
     fn can_deserialize_toml() {
-        let expected = DiscordConfig {
-            discord_token: "111".into(),
-            database_url: "sqlite://:memory:".into(),
-            redis_url: "redis://localhost".into(),
-            job_interval_min: 1,
-            shard_key: uuid::uuid!("c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"),
-            session_key: Some("1hYw2n0+t8SDo+gqy+Q3x2SJ4u/Y6e6QPrMHExaQTHETOD8tlUsR2Cq66H0a2QuGBK7L1TIDhAupc3rHCbiehw==".into()),
-            client_secret: None,
-            client_id: Some("948517362313863198".into())
-        };
 
-        let config = DiscordConfig::from_file(TEST_CONFIG_PATH).unwrap();
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("config.toml", TEST_CONFIG)?;
 
-        assert_eq!(expected, config);
+            let expected = DiscordConfig {
+                discord_token: "111".into(),
+                database_url: "sqlite://:memory:".into(),
+                redis_url: "redis://localhost".into(),
+                job_interval_min: 1,
+                shard_key: uuid::uuid!("c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"),
+                session_key: Some("1hYw2n0+t8SDo+gqy+Q3x2SJ4u/Y6e6QPrMHExaQTHETOD8tlUsR2Cq66H0a2QuGBK7L1TIDhAupc3rHCbiehw==".into()),
+                client_secret: None,
+                client_id: Some(NonZeroU64::new(948517362313863198).unwrap()),
+            };
+
+            let config = DiscordConfig::from_env_and_file("config.toml")?;
+            assert_eq!(config, expected);
+
+            Ok(())
+        });
     }
 
     #[test]
     fn env_overwrites_file() {
         // Arrange
-        env_setup();
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("config.toml", TEST_CONFIG)?;
 
-        let expected = DiscordConfig {
-            discord_token: "222".into(),
-            database_url: "sqlite://:memory:".into(),
-            redis_url: "redis://localhost".into(),
-            job_interval_min: 1,
-            shard_key: uuid::uuid!("c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"),
-            session_key: Some("1hYw2n0+t8SDo+gqy+Q3x2SJ4u/Y6e6QPrMHExaQTHETOD8tlUsR2Cq66H0a2QuGBK7L1TIDhAupc3rHCbiehw==".into()),
-            client_secret: Some("supersecret".into()),
-            client_id: Some("948517362313863198".into())
-        };
+            jail.set_env(format!("{}{}", ENV_PREFIX, "CLIENT_SECRET"), "supersecret");
+            jail.set_env(format!("{}{}", ENV_PREFIX, "DISCORD_TOKEN"), r#""222""#);
 
-        // Act
-        let config = DiscordConfig::from_env_and_file(TEST_CONFIG_PATH).unwrap();
+            let expected = DiscordConfig {
+                discord_token: "222".into(),
+                database_url: "sqlite://:memory:".into(),
+                redis_url: "redis://localhost".into(),
+                job_interval_min: 1,
+                shard_key: uuid::uuid!("c69b7bb6-0ca4-40da-8bad-26d9d4d2fb50"),
+                session_key: Some("1hYw2n0+t8SDo+gqy+Q3x2SJ4u/Y6e6QPrMHExaQTHETOD8tlUsR2Cq66H0a2QuGBK7L1TIDhAupc3rHCbiehw==".into()),
+                client_secret: Some("supersecret".into()),
+                client_id: Some(NonZeroU64::new(948517362313863198).unwrap()),
+            };
 
-        // Assert
-        assert_eq!(expected, config);
+            let config = DiscordConfig::from_env_and_file("config.toml")?;
+            assert_eq!(expected, config);
 
-        env_teardown();
-    }
-
-    fn env_setup() {
-        env::set_var(format!("{}_DISCORD_TOKEN", ENV_PREFIX), "222");
-        env::set_var(format!("{}_CLIENT_SECRET", ENV_PREFIX), "supersecret");
-    }
-
-    fn env_teardown() {
-        env::remove_var(format!("{}_DISCORD_TOKEN", ENV_PREFIX));
-        env::remove_var(format!("{}_CLIENT_SECRET", ENV_PREFIX));
+            Ok(())
+        });
     }
 }

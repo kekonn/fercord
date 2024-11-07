@@ -14,10 +14,9 @@ default = ["fercord_storage/sqlite"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-fercord_storage = { path = "../fercord_storage", version = "0.3"}
-fercord_common ={ path = "../fercord_common", version = "0.1"}
+fercord_storage = { workspace = true }
+fercord_common = { workspace = true }
 poise = { workspace = true}
-config = { workspace = true}
 serde = { workspace = true}
 serde_json = { workspace = true}
 tracing = { workspace = true }
@@ -25,24 +24,10 @@ tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
 interim = { workspace = true }
-reqwest = { version = "0.12", features = ["stream", "rustls-tls"]}
-
-[dependencies.tokio]
-version = "1"
-features = ["rt-multi-thread", "time"]
+reqwest = { workspace = true }
+uuid = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
 
 [dependencies.tokio-stream]
 version = "0.1"
-
-[dependencies.anyhow]
-version = "1"
-features = ["backtrace"]
-
-[dependencies.uuid]
-version = "1"
-features = [
-    "v4",                # Lets you generate random UUIDs
-    "fast-rng",          # Use a faster (but still sufficiently random) RNG
-    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
-    "serde",             # Add serde support
-]

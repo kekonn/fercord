@@ -1,0 +1,9 @@
+@sesh_cookie = id=sCkDhso3cjQYSjl+ttYepS4ykP+WHN%2FmJu3yr+yDXf44Ki9sNCY9CA9l69AFVzDR0dpoNYQy10sqxetV7D5XI%2FmYsBL9b3+B5z0H+ao0P+n8w416NFG8dmbeP2g%3D; HttpOnly; SameSite=Lax; Secure; Path=/
+
+### GET health_check
+GET {{base_url}}/healthz
+
+
+### GET api/identify
+GET {{base_url}}/api/identify
+Cookie: {{sesh_cookie}}
