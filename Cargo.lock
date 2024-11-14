@@ -1084,7 +1084,7 @@ dependencies = [
 
 [[package]]
 name = "fercord_bot"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1120,7 +1120,7 @@ dependencies = [
 
 [[package]]
 name = "fercord_storage"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "anyhow",
  "async-trait",
