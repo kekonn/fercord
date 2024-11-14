@@ -37,7 +37,7 @@ impl FromRequest for Client {
                 session_data.access_token,
                 session_data.refresh_token,
                 session_data.expires_in,
-                config.client_id.clone().unwrap().into(),
+                config.client_id.unwrap(),
                 config.client_secret.as_ref().unwrap().to_string(),
             );
 

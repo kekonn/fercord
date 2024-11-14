@@ -31,7 +31,7 @@ impl KVClient {
     /// Create a new `KVClient` from a `&DiscordConfig`.
     #[instrument(level = "trace")]
     pub fn new(config: &DiscordConfig) -> Result<Self> {
-        let client = redis::Client::open(config.redis_url.as_ref())?;
+        let client = Client::open(config.redis_url.as_ref())?;
 
         Ok(Self { client })
     }

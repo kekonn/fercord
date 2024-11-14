@@ -89,7 +89,7 @@ impl DiscordConfig {
         let file_figment = Figment::new()
             .merge(Toml::file_exact(path));
 
-        if let Ok(_) = file_figment.extract_inner::<String>("client_secret") {
+        if file_figment.extract_inner::<String>("client_secret").is_ok() {
             return Err(Error::from("Setting client secret is not allowed from a config file"));
         }
 

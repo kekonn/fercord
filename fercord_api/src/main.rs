@@ -3,7 +3,7 @@ use actix_web::cookie::Key;
 use actix_web::http::header::TryIntoHeaderValue;
 use actix_web::http::{header, StatusCode};
 use actix_web::{
-    get, http, middleware, post, web, App, HttpRequest, HttpResponse,
+    get, middleware, web, App, HttpRequest, HttpResponse,
     HttpServer, Responder, Result,
 };
 use anyhow::{anyhow, bail};
@@ -73,7 +73,7 @@ impl actix_web::ResponseError for ApiError {
 
         let mime = mime::APPLICATION_JSON.try_into_value().unwrap();
         res.headers_mut()
-            .insert(actix_web::http::header::CONTENT_TYPE, mime);
+            .insert(header::CONTENT_TYPE, mime);
 
         res.set_body(actix_web::body::BoxBody::new(buf))
     }

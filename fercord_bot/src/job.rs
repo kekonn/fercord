@@ -3,7 +3,6 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use poise::async_trait;
-use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::CacheHttp;
 use serde::{Deserialize, Serialize};
 use tracing::{debug_span, event, field, info, Level};
@@ -12,7 +11,7 @@ use fercord_common::prelude::*;
 use fercord_storage::prelude::*;
 
 //pub type Job = Box<dyn Fn(&Arc<JobArgs>) -> JobResult>;
-pub(crate) type JobResult = anyhow::Result<()>;
+pub(crate) type JobResult = Result<()>;
 
 #[async_trait]
 pub trait Job {
@@ -20,10 +19,11 @@ pub trait Job {
 }
 
 pub struct JobArgs<'j> {
+    #[allow(unused)]
     pub kv_client: Arc<KVClient>,
     pub db_pool: Arc<AnyPool>,
     pub last_run_time: DateTime<Utc>,
-    pub discord_client: Arc<dyn serenity::CacheHttp + 'j>,
+    pub discord_client: Arc<dyn CacheHttp + 'j>,
     pub discord_config: DiscordConfig,
 }
 
@@ -33,7 +33,7 @@ impl<'j> JobArgs<'j> {
         kv_client: &Arc<KVClient>,
         db_pool: &Arc<AnyPool>,
         last_run_time: DateTime<Utc>,
-        discord_client: &Arc<impl serenity::CacheHttp + 'j>,
+        discord_client: &Arc<impl CacheHttp + 'j>,
         discord_config: DiscordConfig,
     ) -> Self {
         Self {
@@ -48,7 +48,7 @@ impl<'j> JobArgs<'j> {
 
 #[derive(Debug, Deserialize, Serialize)]
 struct JobState {
-    pub last_run: chrono::DateTime<Utc>,
+    pub last_run: DateTime<Utc>,
     job_shard_key: uuid::Uuid,
 }
 

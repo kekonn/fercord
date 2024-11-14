@@ -17,7 +17,7 @@ impl Identifiable for GuildTimezone {
     }
 }
 
-impl TryFrom<GuildTimezone> for chrono_tz::Tz {
+impl TryFrom<GuildTimezone> for Tz {
     type Error = anyhow::Error;
 
     fn try_from(value: GuildTimezone) -> Result<Self, Self::Error> {

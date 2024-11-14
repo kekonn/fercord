@@ -35,7 +35,7 @@ pub async fn timezone(
     ctx.defer_ephemeral().await?;
 
     if let Some(guild_id) = ctx.guild_id() {
-        span.record("guild_id", tracing::field::debug(&guild_id));
+        span.record("guild_id", field::debug(&guild_id));
 
         let guild_timezone = GuildTimezone {
             guild_id: guild_id.get(),
@@ -254,6 +254,7 @@ pub(crate) fn clean_input(natural_input: String) -> String {
 }
 
 /// Autocomplete renderer for the timezones list.
+#[allow(clippy::unnecessary_to_owned)]
 async fn autocomplete_timezone<'a>(
     _ctx: Context<'_>,
     partial: &str,

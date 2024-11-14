@@ -7,8 +7,8 @@ use serenity::all::GuildInfo;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::num::NonZeroU64;
-use std::sync::RwLock;
 use thiserror::Error;
+use tokio::sync::RwLock;
 use tracing::{event, event_enabled, Level};
 
 const DISCORD_API_URL: &str = "https://discord.com/api";
@@ -109,9 +109,10 @@ struct AccessTokenResponse {
     pub scope: String,
 }
 
-impl Into<crate::model::DiscordSessionData> for Client {
+#[allow(clippy::from_over_into)]
+impl Into<model::DiscordSessionData> for Client {
     fn into(self) -> model::DiscordSessionData {
-        let store = &self.store.read().unwrap();
+        let store = &self.store.blocking_read();
         model::DiscordSessionData {
             expires_in: store.expires_at,
             access_token: store.access_token.clone(),
@@ -266,7 +267,7 @@ impl Client {
     pub async fn logout(&self) -> Result<(), ClientError> {
         let client = self.create_client().await?;
 
-        let store = self.store.read().unwrap();
+        let store = self.store.read().await;
 
         let response = client
             .post(format!("{}/oauth2/token/revoke", DISCORD_API_URL))
@@ -288,7 +289,7 @@ impl Client {
     /// Creates a Serenity Http client.
     async fn create_client(&self) -> Result<HttpClient, ClientError> {
         let mut headers = header::HeaderMap::new();
-        let store = self.store.read().unwrap();
+        let store = self.store.read().await;
         headers.insert(
             header::AUTHORIZATION,
             format!("Bearer {}", &store.access_token).parse().unwrap(),
@@ -324,7 +325,7 @@ impl Client {
 
             let resp_body = refresh_response.text().await?;
             let new_token_response: AccessTokenResponse = process_response(resp_body.as_str())?;
-            let mut write_store = self.store.write().unwrap();
+            let mut write_store = self.store.write().await;
 
             event!(Level::TRACE, "Successfully refreshed access token");
             write_store.access_token = new_token_response.access_token;
@@ -339,7 +340,7 @@ impl Client {
     #[inline]
     fn is_token_expired(&self) -> bool {
         let now = Utc::now();
-        let store = self.store.read().unwrap();
+        let store = self.store.blocking_read();
         let expiry = store.expires_at;
         event!(
             Level::TRACE,
