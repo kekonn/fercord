@@ -81,6 +81,25 @@ impl Default for TokenExchangeRequest {
     }
 }
 
+#[derive(Debug, Serialize)]
+struct TokenRefreshRequest {
+    pub grant_type: String,
+    pub refresh_token: String,
+    pub client_id: String,
+    pub client_secret: String,
+}
+
+impl Default for TokenRefreshRequest {
+    fn default() -> Self {
+        Self {
+            grant_type: "refresh_token".into(),
+            client_id: "".into(),
+            client_secret: "".into(),
+            refresh_token: "".into(),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct AccessTokenResponse {
     pub access_token: String,
@@ -291,8 +310,26 @@ impl Client {
 
         if self.is_token_expired() {
             event!(Level::DEBUG, "Current token is expired. Refreshing token");
-            // TODO: refresh token
-            todo!()
+
+            let refresh_response = client.post(format!("{}/oauth2/token", DISCORD_API_URL))
+                .form(&TokenRefreshRequest {
+                    client_id: store.client_id.to_string(),
+                    client_secret: store.client_secret.clone(),
+                    refresh_token: store.refresh_token.clone(),
+                    ..Default::default()
+                })
+                .send().await?;
+
+            event!(Level::TRACE, "{}: {}", refresh_response.url(), refresh_response.status());
+
+            let resp_body = refresh_response.text().await?;
+            let new_token_response: AccessTokenResponse = process_response(resp_body.as_str())?;
+            let mut write_store = self.store.write().unwrap();
+
+            event!(Level::TRACE, "Successfully refreshed access token");
+            write_store.access_token = new_token_response.access_token;
+            write_store.refresh_token = new_token_response.refresh_token;
+            write_store.expires_at = TokenExpiryTimestamp::from(Utc::now() + Duration::seconds(new_token_response.expires_in));
         }
 
         Ok(client)
