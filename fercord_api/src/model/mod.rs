@@ -49,6 +49,26 @@ pub struct AuthorizedUser {
     pub public_flags: u32,
 }
 
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
+pub struct Guild {
+    /// The unique Id of the guild.
+    ///
+    /// Can be used to calculate creation date.
+    pub id: String,
+    /// The name of the guild.
+    pub name: String,
+    /// The hash of the icon of the guild.
+    ///
+    /// This can be used to generate a URL to the guild's icon image.
+    pub icon: Option<String>,
+    /// Indicator of whether the current user is the owner.
+    pub owner: bool,
+    /// The permissions that the current user has.
+    pub permissions: u64,
+    /// See [`Guild::features`].
+    pub features: Vec<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

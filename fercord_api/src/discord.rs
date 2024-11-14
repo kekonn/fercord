@@ -4,6 +4,7 @@ use chrono::{DateTime, Duration, SecondsFormat, Utc};
 use reqwest::{header, Client as HttpClient};
 use serde::{Deserialize, Serialize};
 use serenity::all::GuildInfo;
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::num::NonZeroU64;
 use std::sync::RwLock;
@@ -205,7 +206,7 @@ impl Client {
 
 /// self implementations
 impl Client {
-    #[tracing::instrument(name = "discord.client")]
+    #[tracing::instrument(name = "discord.client", skip(self))]
     pub async fn get_user_identity(&self) -> Result<model::AuthorizedIdentity, ClientError> {
         let client = self.create_client().await?;
         let response = client
@@ -229,7 +230,7 @@ impl Client {
         process_response(body_text.as_str())
     }
 
-    #[tracing::instrument(name = "discord.client")]
+    #[tracing::instrument(name = "discord.client", skip(self))]
     pub async fn get_managing_guilds(&self) -> Result<Vec<GuildInfo>, ClientError> {
         let client = self.create_client().await?;
         let response = client.get(format!("{}/users/@me/guilds", DISCORD_API_URL))
@@ -240,6 +241,26 @@ impl Client {
         let response_body = response.text().await.map_err(ClientError::from)?;
 
         process_response(response_body.as_str())
+    }
+
+    #[tracing::instrument(name = "discord.client", skip(self))]
+    pub async fn logout(&self) -> Result<(), ClientError> {
+        let client = self.create_client().await?;
+
+        let store = self.store.read().unwrap();
+
+        let response = client
+            .post(format!("{}/oauth2/token/revoke", DISCORD_API_URL))
+            .form(&HashMap::from([
+                ("token", store.refresh_token.as_str()),
+                ("token_hint", "refresh_token"),
+                ("client_id", store.client_id.to_string().as_str()),
+                ("client_secret", store.client_secret.as_str()),
+            ]))
+            .send()
+            .await?;
+
+        response.error_for_status().map(|_| ()).map_err(ClientError::from)
     }
 }
 
@@ -259,6 +280,8 @@ impl Client {
                 .parse()
                 .unwrap(),
         );
+
+        event!(Level::TRACE, "Creating HTTP client with headers: {:?}", headers);
 
         let client = reqwest::Client::builder()
             .https_only(true)

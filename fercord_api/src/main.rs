@@ -3,14 +3,14 @@ use actix_web::cookie::Key;
 use actix_web::http::header::TryIntoHeaderValue;
 use actix_web::http::{header, StatusCode};
 use actix_web::{
-    get, http, middleware, post, web, App, HttpRequest, HttpResponse, HttpResponseBuilder,
+    get, http, middleware, post, web, App, HttpRequest, HttpResponse,
     HttpServer, Responder, Result,
 };
 use anyhow::{anyhow, bail};
 use serde::{Deserialize, Serialize};
 use std::net::Ipv4Addr;
 use thiserror::Error;
-use tracing::{event, trace_span, Level};
+use tracing::{event, Level};
 use utoipa::{OpenApi, ToSchema};
 use utoipa_actix_web::{scope, AppExt};
 use utoipa_scalar::{Scalar, Servable};
@@ -23,6 +23,7 @@ use crate::model::HealthCheck;
 mod discord;
 mod model;
 mod util;
+mod user;
 
 pub(crate) const SESSION_DATA_KEY: &str = "session_data";
 pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -30,8 +31,8 @@ pub(crate) const REPO_URL: &str = env!("CARGO_PKG_REPOSITORY");
 
 mod tags {
     pub const AUTHENTICATION: &str = "Authentication";
-    pub const V1: &str = "v1";
     pub const UTILITY: &str = "Utility";
+    pub const USER: &str = "User";
 }
 
 #[derive(OpenApi)]
@@ -173,29 +174,17 @@ async fn discord_auth(
     )
 )]
 #[get("/logout")]
-async fn logout(session: Session) -> Result<impl Responder> {
-    event!(Level::DEBUG, "Removing session data");
-    let _ = session.remove(SESSION_DATA_KEY);
+async fn logout(session: Session, discord_client: discord::Client) -> Result<impl Responder> {
 
-    // TODO: Rescind token
+    let logout_result = discord_client.logout().await;
+    session.purge();
+
+    logout_result?;
 
     Ok(HttpResponse::Ok())
 }
 
-#[utoipa::path(
-    tag = tags::V1,
-    responses(
-        (status = 200, description = "All user data Discord shares with the API", body = model::AuthorizedIdentity, content_type = mime::APPLICATION_JSON.to_string()),
-        (status = 401, description = "Please log in first")
-    )
-)]
-#[get("/identify")]
-async fn identify(discord_client: discord::Client) -> Result<impl Responder> {
 
-    let user_data = discord_client.get_user_identity().await?;
-
-    Ok(web::Json(user_data))
-}
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
@@ -249,7 +238,17 @@ async fn main() -> anyhow::Result<()> {
             .service(discord_auth)
             .service(logout)
             .service(health_check)
-            .service(scope::scope("/api").service(scope::scope("/v1").service(identify)))
+            .service(
+                scope::scope("/api")
+                    .service(
+                        scope::scope("/v1")
+                        .service(
+                            scope::scope("/user")
+                                .service(user::identify)
+                                .service(user::guilds)
+                        )
+                    )
+            )
             .openapi_service(|api| {
                 Scalar::with_url("/docs", api)
             })
