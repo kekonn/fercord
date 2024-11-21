@@ -14,12 +14,24 @@ on:
     # The branches below must be a subset of the branches above
     branches: [ "main" ]
     types: [ready_for_review]
-    paths:
-      - 'fercord_*/**'
 
 concurrency: "PR${{ github.event.pull_request && github.event.number }}"
 
 jobs:
+  is-changelog-updated:
+    name: Check if updated changelogs are present
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: List changed files
+        id: changed_files
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.sha }}
+          git diff --name-only ${{ github.event.pull_request.base.sha }} HEAD > changed_files.txt
+
+
   rust-clippy-analyze:
     name: Analyze with clippy
     runs-on: ubuntu-latest
@@ -53,6 +65,7 @@ jobs:
           wait-for-processing: true
 
   cargo-test:
+    needs: rust-clippy-analyze
     name: Run unit tests
     runs-on: ubuntu-latest
     permissions:
