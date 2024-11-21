@@ -16,4 +16,4 @@
 
 
 <!-- next-url -->
-[Unreleased]: https://github.com/kekonn/fercord/compare/1c72dea07273f387914ffd122218e27a6a676a9a...v0.1.0
+[Unreleased]: https://github.com/kekonn/fercord/compare/2b0df937a95c61775b2bdbadcbc212615ac2029d...v0.1.0
