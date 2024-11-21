@@ -30,7 +30,7 @@ jobs:
         id: changed_files
         run: |
           just changed-files ${{ github.event.pull_request.base.sha }}
-          printf "::debug::Changeset:\n%s" "$(cat changeset.txt)""
+          printf "::debug::Changeset:\n%s" "$(cat changeset.txt)"
 
 
   rust-clippy-analyze:
