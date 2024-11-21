@@ -7,13 +7,13 @@
 # More details at https://github.com/rust-lang/rust-clippy
 # and https://rust-lang.github.io/rust-clippy/
 
-name: Check PR
+name: PR Checks
 
 on:
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [ "main" ]
-    types: [ready_for_review]
+    types: [ready_for_review, opened]
 
 concurrency: "PR${{ github.event.pull_request && github.event.number }}"
 
