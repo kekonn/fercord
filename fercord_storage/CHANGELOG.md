@@ -3,8 +3,10 @@
 <!-- next-header -->
 
 ## [Unreleased] - ReleaseDate
+- chore: Update dependencies
 
 ## [0.3.4] - 2024-08-28
+- chore: Update dependencies
 
 ## [0.3.3] - 2024-03-20
 - chore: Update dependencies

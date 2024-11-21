@@ -1,0 +1,135 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+# rust-clippy is a tool that runs a bunch of lints to catch common
+# mistakes in your Rust code and help improve your Rust code.
+# More details at https://github.com/rust-lang/rust-clippy
+# and https://rust-lang.github.io/rust-clippy/
+
+name: PR Checks
+
+on:
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ "main" ]
+    types: [ready_for_review, opened, synchronize]
+
+concurrency: "PR${{ github.event.pull_request && github.event.number }}"
+
+jobs:
+  is-changelog-updated:
+    name: Check if updated changelogs are present
+    runs-on: ubuntu-latest
+    outputs:
+      needs-check: ${{ steps.check_relevant_changes.outputs.code_or_cargo_changed }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - uses: taiki-e/install-action@just
+        
+      - name: List changed files
+        run: |
+          just changed-files ${{ github.event.pull_request.base.sha }}
+          printf "::debug::Changeset:\n%s" "$(cat changeset.txt)"
+
+      - name: Check for code or cargo-related changes
+        id: check_relevant_changes
+        run: |
+          # Initialize the boolean flag
+          code_or_cargo_changed=false
+
+          # Check the file list
+          while IFS= read -r file; do
+            if [[ "$file" == *.rs || "$file" == *.toml || "$file" == "Cargo.lock" ]]; then
+              code_or_cargo_changed=true
+              break
+            fi
+          done < changeset.txt
+
+          # Output the result
+          echo "code_or_cargo_changed=$code_or_cargo_changed" >> $GITHUB_OUTPUT
+          echo "## Detected changes" >> $GITHUB_STEP_SUMMARY
+          printf "Changes to code detected: %s" $code_or_cargo_changed >> $GITHUB_STEP_SUMMARY
+      
+      - uses: swatinem/rust-cache@v2
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        
+      - name: Verify if CHANGELOG is updated
+        run: |
+          # Extract a list of modified workspace packages
+          workspace_root=$(cargo metadata --format-version 1 --no-deps | jq -r '.workspace_root')
+          affected_packages=()
+
+          # Find packages with changes
+          while IFS= read -r file; do
+          dir=$(dirname "$file")
+          if [[ -f "$workspace_root/$dir/Cargo.toml" ]]; then
+            package_name=$(grep -m 1 '^name' "$workspace_root/$dir/Cargo.toml" | awk -F\" '{print $2}')
+            if ! grep -q "CHANGELOG.md" <<< "$(git diff --name-only ${{ github.event.pull_request.base.sha }} HEAD -- $workspace_root/$dir)"; then
+              affected_packages+=("$package_name")
+              echo "::error file=$dir/CHANGELOG.md::Package '$package_name' has changes but CHANGELOG.md is not updated."
+            fi
+          fi
+          done < changeset.txt
+
+          if [[ ${#affected_packages[@]} -gt 0 ]]; then
+            printf "## Changelog report\n" >> $GITHUB_STEP_SUMMARY
+            echo "One or more packages require an updated CHANGELOG.md. See job errors for details." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "All changed packages have updated CHANGELOG.md."
+          fi
+
+  rust-clippy-analyze:
+    name: Analyze with clippy
+    runs-on: ubuntu-latest
+    needs: is-changelog-updated
+    if: ${{ needs.is-changelog-updated.outputs.needs-check == 'true' }}
+    permissions:
+      contents: read
+      security-events: write
+      actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: swatinem/rust-cache@v2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: taiki-e/install-action@cargo-binstall
+      - name: Install required cargo
+        run: cargo binstall -y --force clippy-sarif sarif-fmt
+
+      - name: Run rust-clippy
+        run:
+          cargo clippy --message-format=json --locked | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
+        continue-on-error: true
+
+      - name: Upload analysis results to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: rust-clippy-results.sarif
+          wait-for-processing: true
+
+  cargo-test:
+    needs: [rust-clippy-analyze, is-changelog-updated]
+    if: ${{ needs.is-changelog-updated.outputs.needs-check == 'true' }}
+    name: Run unit tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: swatinem/rust-cache@v2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run unit tests
+        run: cargo test --tests --locked
