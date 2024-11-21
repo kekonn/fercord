@@ -25,7 +25,7 @@ jobs:
       needs-check: ${{ steps.check_relevant_changes.outputs.code_or_cargo_changed }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - uses: taiki-e/install-action@just
         
       - name: List changed files
@@ -49,6 +49,8 @@ jobs:
 
           # Output the result
           echo "code_or_cargo_changed=$code_or_cargo_changed" >> $GITHUB_OUTPUT
+          echo "## Detected changes" >> $GITHUB_STEP_SUMMARY
+          printf "Changes to code detected: %s" $code_or_cargo_changed >> $GITHUB_STEP_SUMMARY
       
       - uses: swatinem/rust-cache@v2
       - name: Install Rust toolchain
@@ -73,6 +75,7 @@ jobs:
           done < changeset.txt
 
           if [[ ${#affected_packages[@]} -gt 0 ]]; then
+            printf "## Changelog report\n" >> $GITHUB_STEP_SUMMARY
             echo "One or more packages require an updated CHANGELOG.md. See job errors for details." >> $GITHUB_STEP_SUMMARY
             exit 1
           else
