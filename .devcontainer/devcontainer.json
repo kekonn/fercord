@@ -1,13 +1,6 @@
 {
 	"name": "Rust",
-	"build": {
-		"dockerfile": "Dockerfile",
-		"args": {
-			// Use the VARIANT arg to pick a Debian OS version: buster, bullseye
-			// Use bullseye when on local on arm64/Apple Silicon.
-			"VARIANT": "bullseye"
-		}
-	},
+	"image": "mcr.microsoft.com/devcontainers/rust:1-bookworm",
 	"runArgs": [
 		"--cap-add=SYS_PTRACE",
 		"--security-opt",
@@ -17,14 +10,15 @@
 		"RUST_BACKTRACE": "1",
 		"RUST_LOG": "info,main=debug"
 	},
+	"updateContentCommand":{
+		"install-commands": "cargo binstall -y cargo-watch ripgrep cargo-update cargo-dist cargo-release"
+	},
 
-	"postCreateCommand": [
-		"cargo install cargo-binstall && cargo binstall -y cargo-watch && cargo binstall -y ripgrep && cargo binstall -y cargo-update",
-		"cd ${containerWorkspaceFolder} && cargo build"
-	],
-	"postStartCommand": [
-		"cd ${containerWorkspaceFolder} && cargo install-update -a"
-	],
+	"features": {
+		"ghcr.io/itsmechlark/features/redis-server": "1",
+		"ghcr.io/lee-orr/rusty-dev-containers/cargo-binstall": "1",
+		"ghcr.io/devcontainers/features/github-cli": "1"
+	},
 
 	// Configure tool-specific properties.
 	"customizations": {
@@ -47,12 +41,12 @@
 				"mutantdino.resourcemonitor",
 				"rust-lang.rust-analyzer",
 				"tamasfe.even-better-toml",
-				"serayuzgur.crates",
+				"fill-labs.dependi",
+				"github.vscode-github-actions",
 				"hbenl.vscode-test-explorer",
 				"Swellaby.vscode-rust-test-adapter",
 				"mhutchie.git-graph",
 				"cweijan.vscode-redis-client",
-				"cweijan.vscode-postgresql-client2"
 			]
 		}
 	},
