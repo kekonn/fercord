@@ -21,21 +21,69 @@ jobs:
   is-changelog-updated:
     name: Check if updated changelogs are present
     runs-on: ubuntu-latest
+    outputs:
+      needs-check: ${{ steps.check_relevant_changes.outputs.code_or_cargo_changed }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
       - uses: taiki-e/install-action@just
         
       - name: List changed files
-        id: changed_files
         run: |
           just changed-files ${{ github.event.pull_request.base.sha }}
           printf "::debug::Changeset:\n%s" "$(cat changeset.txt)"
 
+      - name: Check for code or cargo-related changes
+        id: check_relevant_changes
+        run: |
+          # Initialize the boolean flag
+          code_or_cargo_changed=false
+
+          # Check the file list
+          while IFS= read -r file; do
+            if [[ "$file" == *.rs || "$file" == *.toml || "$file" == "Cargo.lock" ]]; then
+              code_or_cargo_changed=true
+              break
+            fi
+          done < changeset.txt
+
+          # Output the result
+          echo "code_or_cargo_changed=$code_or_cargo_changed" >> $GITHUB_OUTPUT
+      
+      - uses: swatinem/rust-cache@v2
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        
+      - name: Verify if CHANGELOG is updated
+        run: |
+          # Extract a list of modified workspace packages
+          workspace_root=$(cargo metadata --format-version 1 --no-deps | jq -r '.workspace_root')
+          affected_packages=()
+
+          # Find packages with changes
+          while IFS= read -r file; do
+          dir=$(dirname "$file")
+          if [[ -f "$workspace_root/$dir/Cargo.toml" ]]; then
+            package_name=$(grep -m 1 '^name' "$workspace_root/$dir/Cargo.toml" | awk -F\" '{print $2}')
+            if ! grep -q "CHANGELOG.md" <<< "$(git diff --name-only ${{ github.event.pull_request.base.sha }} HEAD -- $workspace_root/$dir)"; then
+              affected_packages+=("$package_name")
+              echo "::error file=$dir/CHANGELOG.md::Package '$package_name' has changes but CHANGELOG.md is not updated."
+            fi
+          fi
+          done < changeset.txt
+
+          if [[ ${#affected_packages[@]} -gt 0 ]]; then
+            echo "One or more packages require an updated CHANGELOG.md. See job errors for details." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "All changed packages have updated CHANGELOG.md."
+          fi
 
   rust-clippy-analyze:
     name: Analyze with clippy
     runs-on: ubuntu-latest
+    needs: is-changelog-updated
+    if: ${{ needs.is-changelog-updated.outputs.needs-check && needs.is-changelog-updated.result }}
     permissions:
       contents: read
       security-events: write
@@ -66,7 +114,8 @@ jobs:
           wait-for-processing: true
 
   cargo-test:
-    needs: rust-clippy-analyze
+    needs: [rust-clippy-analyze, is-changelog-updated]
+    if: ${{ needs.is-changelog-updated.outputs.needs-check && needs.is-changelog-updated.result }}
     name: Run unit tests
     runs-on: ubuntu-latest
     permissions:
