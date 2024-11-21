@@ -8,15 +8,16 @@
 	],
 	"containerEnv": {
 		"RUST_BACKTRACE": "1",
-		"RUST_LOG": "info,main=debug"
-	},
-	"updateContentCommand":{
-		"install-commands": "cargo binstall -y cargo-watch ripgrep cargo-update cargo-dist cargo-release"
+		"RUST_LOG": "info,main=debug",
 	},
 
+	"onCreateCommand": {
+		"binstall": "cargo install --locked cargo-binstall",
+		"clippy": "rustup component add clippy"
+	},
+	"updateContentCommand": "cargo binstall --locked -y --force cargo-watch cargo-dist cargo-release cargo-update ripgrep eza bat",
 	"features": {
 		"ghcr.io/itsmechlark/features/redis-server": "1",
-		"ghcr.io/lee-orr/rusty-dev-containers/cargo-binstall": "1",
 		"ghcr.io/devcontainers/features/github-cli": "1"
 	},
 
