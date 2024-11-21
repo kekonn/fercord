@@ -13,6 +13,9 @@ on:
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [ "main" ]
+    types: [ready_for_review]
+    paths:
+      - 'fercord_*/**'
 
 concurrency: "PR${{ github.event.pull_request && github.event.number }}"
 
