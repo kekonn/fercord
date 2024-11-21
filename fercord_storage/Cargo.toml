@@ -21,36 +21,20 @@ postgres = ["sqlx-oldapi/postgres"]
 
 [dependencies]
 poise = { workspace = true}
-config = { workspace = true}
 serde = { workspace = true}
-async-trait = "0.1"
 serde_json = { workspace = true }
 tracing = { workspace = true }
-tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
+tracing-subscriber = { workspace = true }
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
-redis = { version = "0.25", features = ["tokio-comp", "json"] }
-
-[dependencies.tokio]
-version = "1"
-features = ["rt-multi-thread", "time"]
-
-[dependencies.tokio-stream]
-version = "0.1"
-
-[dependencies.anyhow]
-version = "1"
-features = ["backtrace"]
+fercord_common = { workspace = true }
+uuid = { workspace = true }
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+anyhow = { workspace = true }
+async-trait = "0.1"
+redis = { version = "0.27", features = ["tokio-comp", "json"] }
 
 [dependencies.sqlx-oldapi]
 version = "0.6"
 features = ["default", "chrono", "runtime-tokio-native-tls", "any"]
-
-[dependencies.uuid]
-version = "1"
-features = [
-    "v4",                # Lets you generate random UUIDs
-    "fast-rng",          # Use a faster (but still sufficiently random) RNG
-    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
-    "serde",             # Add serde support
-]

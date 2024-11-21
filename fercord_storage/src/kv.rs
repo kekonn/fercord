@@ -1,15 +1,15 @@
+use std::time::Duration;
 use std::{
     fmt::Debug,
     marker::{Send, Sync},
 };
-use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use redis::{AsyncCommands, Client, ConnectionLike, ToRedisArgs};
 use serde::{de::DeserializeOwned, Serialize};
 use tracing::*;
 
-use crate::config::DiscordConfig;
+use fercord_common::config::DiscordConfig;
 
 pub type KVIdentity = String;
 
@@ -17,7 +17,7 @@ pub type KVIdentity = String;
 ///
 /// ## Creation
 /// Create a new client by calling `KVClient::`
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct KVClient {
     client: Client,
 }
@@ -31,7 +31,7 @@ impl KVClient {
     /// Create a new `KVClient` from a `&DiscordConfig`.
     #[instrument(level = "trace")]
     pub fn new(config: &DiscordConfig) -> Result<Self> {
-        let client = redis::Client::open(config.redis_url.as_ref())?;
+        let client = Client::open(config.redis_url.as_ref())?;
 
         Ok(Self { client })
     }
@@ -135,7 +135,9 @@ impl KVClient {
     /// Perform a connection check.
     /// If we can obtain an open connection in 15 seconds, we return `Ok()`.
     pub async fn connection_check(&self) -> Result<()> {
-        let connection_result = self.client.get_connection_with_timeout(Duration::from_secs(15));
+        let connection_result = self
+            .client
+            .get_connection_with_timeout(Duration::from_secs(15));
 
         match connection_result {
             Ok(conn) => {
@@ -144,8 +146,8 @@ impl KVClient {
                 } else {
                     Err(anyhow!("Could not open connection"))
                 }
-            },
-            Err(e) => Err(anyhow!(e))
+            }
+            Err(e) => Err(anyhow!(e)),
         }
     }
 }

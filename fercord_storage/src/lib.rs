@@ -11,15 +11,11 @@ pub mod model;
 /// Database access
 pub mod db;
 
-/// Config models
-pub mod config;
-
 /// fercord_storage prelude
 pub mod prelude {
     pub use sqlx_oldapi::any::AnyPool;
 
-    pub use crate::config::DiscordConfig;
     pub use crate::db;
-    pub use crate::kv::KVClient;
-    pub use crate::model as model;
+    pub use crate::kv::{Identifiable, KVClient, KVIdentity};
+    pub use crate::model;
 }

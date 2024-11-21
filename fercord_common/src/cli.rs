@@ -9,12 +9,13 @@ pub struct Args {
     /// Current timezone
     #[arg(env("TZ"), default_value("Etc/Utc"))]
     pub timezone: String,
+    /// Subcommands
     #[command(subcommand)]
     pub command: Option<Commands>,
 }
 
 #[derive(Subcommand, Debug, PartialOrd, PartialEq)]
 pub enum Commands {
-    /// Simply performs health checks
+    /// Simply performs health checks. Only supported by the bot. Ignored by all the rest
     Healthcheck,
 }

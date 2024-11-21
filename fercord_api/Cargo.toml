@@ -1,7 +1,7 @@
 [package]
-name = "fercord_bot"
-version = "0.3.4"
-description = "A Discord bot written in Rust, for personal use"
+name = "fercord_api"
+version = "0.1.0"
+description = "Fercord's Web API"
 license.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -16,18 +16,23 @@ default = ["fercord_storage/sqlite"]
 [dependencies]
 fercord_storage = { workspace = true }
 fercord_common = { workspace = true }
-poise = { workspace = true}
 serde = { workspace = true}
 serde_json = { workspace = true}
 tracing = { workspace = true }
-tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
+tracing-subscriber = { workspace = true}
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
-interim = { workspace = true }
-reqwest = { workspace = true }
+thiserror = { workspace = true }
+reqwest = { workspace = true, features = ["json"]}
+mime = "0.3"
+clap = { workspace = true }
 uuid = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
+serenity = { version = "0.12", features = ["default", "chrono", "model"]}
+actix-web = "4"
+actix-session = { version = "0.10", features = ["default", "redis-session"]}
+utoipa = { version = "5", features = ["default", "chrono", "actix_extras", "uuid"]}
+utoipa-scalar = { version = "0.2", features = ["actix-web"]}
+utoipa-actix-web = "0.1"
 
-[dependencies.tokio-stream]
-version = "0.1"

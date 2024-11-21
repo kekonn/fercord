@@ -1,21 +1,18 @@
 use anyhow::Context;
-use clap::Parser;
 use poise::serenity_prelude::{self as serenity, ActivityData};
 use tracing::*;
 
-use fercord_storage::config::DiscordConfig;
 use fercord_storage::db;
-use fercord_storage::prelude::{ AnyPool, KVClient };
+use fercord_storage::prelude::*;
 
-use crate::job::{ Job, job_scheduler };
-use crate::cli::Commands;
-use crate::discord::commands::{ reminder, timezone };
+use crate::discord::commands::{reminder, timezone};
 use crate::healthchecks::perform_healthchecks;
+use crate::job::{job_scheduler, Job};
+use fercord_common::{cli, cli::Commands, prelude::*};
 
-mod job;
-mod cli;
-mod healthchecks;
 mod discord;
+mod healthchecks;
+mod job;
 
 pub struct ServerData {
     pub kv_client: KVClient,
@@ -43,8 +40,8 @@ async fn main() -> anyhow::Result<()> {
     // Db Setup
     event!(Level::DEBUG, "Database setup");
 
-    let db_pool = db
-        ::setup(config.database_url.as_ref()).await
+    let db_pool = db::setup(config.database_url.as_ref())
+        .await
         .with_context(|| "Error setting up database connection")?;
 
     // KV Setup
@@ -55,8 +52,7 @@ async fn main() -> anyhow::Result<()> {
     event!(Level::DEBUG, "Discord client setup");
 
     let discord_config = config.clone();
-    let framework = poise::Framework
-        ::builder()
+    let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: vec![reminder(), timezone()],
             ..Default::default()
@@ -66,11 +62,15 @@ async fn main() -> anyhow::Result<()> {
             ctx.set_activity(ActivityData::watching("all of you").into());
 
             Box::pin(async move {
-                poise::builtins
-                    ::register_globally(ctx, &framework.options().commands).await
+                poise::builtins::register_globally(ctx, &framework.options().commands)
+                    .await
                     .with_context(|| "Error creating Discord client")?;
 
-                Ok(ServerData { kv_client, db_pool, config: discord_config })
+                Ok(ServerData {
+                    kv_client,
+                    db_pool,
+                    config: discord_config,
+                })
             })
         })
         .build();
@@ -82,13 +82,15 @@ async fn main() -> anyhow::Result<()> {
 
     let jobs: Vec<Box<dyn Job>> = vec![
         discord::jobs::reminders(),
-        discord::jobs::reminders_cleanup()
+        discord::jobs::reminders_cleanup(),
     ];
 
     let token = config.discord_token.as_str();
     let intents =
         serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT;
-    let mut discord_client = serenity::ClientBuilder::new(token, intents).framework(framework).await?;
+    let mut discord_client = serenity::ClientBuilder::new(token, intents)
+        .framework(framework)
+        .await?;
     let http_client = serenity::HttpBuilder::new(token).build();
 
     let (discord_result, scheduler_result) = tokio::join!(
