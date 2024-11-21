@@ -7,8 +7,13 @@
 *.db
 *.db-shm
 *.db-wal
+*.http
+/*.json
+dist-workspace.toml
+justfile
+release.toml
 
-.github
-.devcontainer
-.testdata
+.github/
+.devcontainer/
+.testdata/
 .run/

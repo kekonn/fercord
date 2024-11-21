@@ -11,7 +11,6 @@ name: PR Checks
 
 on:
   pull_request:
-    # The branches below must be a subset of the branches above
     branches: [ "main" ]
     types: [ready_for_review, opened, synchronize]
 
@@ -53,10 +52,13 @@ jobs:
           printf "Changes to code detected: %s" $code_or_cargo_changed >> $GITHUB_STEP_SUMMARY
       
       - uses: swatinem/rust-cache@v2
+        if: ${{ steps.check_relevant_changes.outputs.code_or_cargo_changed == 'true' }}
       - name: Install Rust toolchain
+        if: ${{ steps.check_relevant_changes.outputs.code_or_cargo_changed == 'true' }}
         uses: dtolnay/rust-toolchain@stable
         
       - name: Verify if CHANGELOG is updated
+        if: ${{ steps.check_relevant_changes.outputs.code_or_cargo_changed == 'true' }}
         run: |
           # Extract a list of modified workspace packages
           workspace_root=$(cargo metadata --format-version 1 --no-deps | jq -r '.workspace_root')
