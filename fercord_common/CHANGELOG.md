@@ -6,6 +6,9 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+- Nothing changed in the code. Only updated the workspace and package metadata
+
 ## [0.1.0] - 2024-12-02
 
 ### Added
