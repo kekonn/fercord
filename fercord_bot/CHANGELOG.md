@@ -3,6 +3,8 @@
 <!-- next-header -->
 
 ## [Unreleased] - ReleaseDate
+
+## [0.3.5] - 2024-12-02
 - chore: Update dependencies
 
 ## [0.3.4] - 2024-08-28
@@ -51,7 +53,8 @@
 
 
 <!-- next-url -->
-[Unreleased]: https://github.com/kekonn/fercord/compare/v0.3.4...HEAD
+[Unreleased]: https://github.com/kekonn/fercord/compare/fercord_bot-v0.3.5...HEAD
+[0.3.5]: https://github.com/kekonn/fercord/compare/v0.3.4...fercord_bot-v0.3.5
 [0.3.4]: https://github.com/kekonn/fercord/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/kekonn/fercord/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/kekonn/fercord/compare/v0.3.1...v0.3.2
