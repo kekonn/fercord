@@ -66,14 +66,17 @@ jobs:
 
           # Find packages with changes
           while IFS= read -r file; do
-          dir=$(dirname "$file")
-          if [[ -f "$workspace_root/$dir/Cargo.toml" ]]; then
-            package_name=$(grep -m 1 '^name' "$workspace_root/$dir/Cargo.toml" | awk -F\" '{print $2}')
-            if ! grep -q "CHANGELOG.md" <<< "$(git diff --name-only ${{ github.event.pull_request.base.sha }} HEAD -- $workspace_root/$dir)"; then
-              affected_packages+=("$package_name")
-              echo "::error file=$dir/CHANGELOG.md::Package '$package_name' has changes but CHANGELOG.md is not updated."
+            dir=$(dirname "$file")
+            if [[ -f "$workspace_root/$dir/Cargo.toml" ]]; then
+              package_name=$(grep -m 1 '^name' "$workspace_root/$dir/Cargo.toml" | awk -F\" '{print $2}')
+              if [ -z "$package_name"]; then
+                continue
+              fi
+              if ! grep -q "CHANGELOG.md" <<< "$(git diff --name-only ${{ github.event.pull_request.base.sha }} HEAD -- $workspace_root/$dir)"; then
+                affected_packages+=("$package_name")
+                echo "::error file=$dir/CHANGELOG.md::Package '$package_name' has changes but CHANGELOG.md is not updated."
+              fi
             fi
-          fi
           done < changeset.txt
 
           if [[ ${#affected_packages[@]} -gt 0 ]]; then
