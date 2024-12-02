@@ -1,5 +1,6 @@
 [workspace]
-members = ["fercord_storage", "fercord_bot", "fercord_api"]
+members = ["fercord_storage", "fercord_bot", "fercord_api", "fercord_common"]
+default-members = ["fercord_storage", "fercord_common", "fercord_bot"]
 resolver = "2"
 
 [workspace.package]
