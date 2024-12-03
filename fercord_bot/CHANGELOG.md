@@ -4,6 +4,8 @@
 
 ## [Unreleased] - ReleaseDate
 
+## [0.4.0] - 2024-12-03
+
 - feat: `/reminder` not also accepts `[day|tomorrow] at [hour][am|pm]` inputs.
 - feat: `/roll` command to roll dice (up to 255d255)
 - feat: `@bot register` prefix-command to register slash commands
@@ -58,7 +60,8 @@
 
 
 <!-- next-url -->
-[Unreleased]: https://github.com/kekonn/fercord/compare/fercord_bot-v0.3.5...HEAD
+[Unreleased]: https://github.com/kekonn/fercord/compare/fercord_bot-v0.4.0...HEAD
+[0.4.0]: https://github.com/kekonn/fercord/compare/fercord_bot-v0.3.5...fercord_bot-v0.4.0
 [0.3.5]: https://github.com/kekonn/fercord/compare/v0.3.4...fercord_bot-v0.3.5
 [0.3.4]: https://github.com/kekonn/fercord/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/kekonn/fercord/compare/v0.3.2...v0.3.3
