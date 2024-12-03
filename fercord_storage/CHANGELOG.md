@@ -3,8 +3,9 @@
 <!-- next-header -->
 
 ## [Unreleased] - ReleaseDate
-## Changed
-- prelude now includes a lot more types
+
+- feat: prelude now includes a lot more types
+- chore: dependency updates
 
 ## [0.3.5] - 2024-12-02
 - chore: Update dependencies
