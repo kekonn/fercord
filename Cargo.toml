@@ -25,6 +25,7 @@ thiserror = "2"
 clap = { version = "4", features = ["derive", "env"] }
 reqwest = { version = "0.12", features = ["stream", "rustls-tls"]}
 tokio-stream = "0.1"
+rstest = "0.23"
 
 fercord_common = { path = "./fercord_common", version = "0.1"}
 fercord_storage = { path = "./fercord_storage", version = "0.3"}
@@ -45,7 +46,6 @@ features = ["rt-multi-thread", "time"]
 [workspace.dependencies.anyhow]
 version = "1"
 features = ["backtrace"]
-
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [profile.release]

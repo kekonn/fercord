@@ -14,6 +14,7 @@ use fercord_storage::prelude::{
 use crate::discord::Context;
 
 const FROM_NOW: &str = "from now";
+const AT: &str = "at";
 
 /// Set the timezone for this server (used by time related commands).
 #[poise::command(slash_command)]
@@ -217,7 +218,7 @@ where
     span.record("cleaned_input", field::debug(&cleaned_input));
     event!(Level::TRACE, ?cleaned_input, "Cleaned up raw input");
 
-    if let Ok(parsed_datetime) = parse_date_string(&cleaned_input, now.fixed_offset(), Dialect::Us)
+    if let Ok(parsed_datetime) = parse_date_string(&cleaned_input, now.fixed_offset(), Dialect::Uk)
     {
         event!(
             Level::TRACE,
@@ -248,6 +249,12 @@ pub(crate) fn clean_input(natural_input: String) -> String {
         let from_now_len = FROM_NOW.len();
 
         pre_clean.drain(now_pos..now_pos + from_now_len);
+    }
+
+    if let Some(at_pos) = pre_clean.find(AT) {
+        let at_len = AT.len();
+
+        pre_clean.drain(at_pos..at_pos + at_len);
     }
 
     pre_clean.trim().to_string()

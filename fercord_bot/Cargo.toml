@@ -25,10 +25,10 @@ tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
 interim = { workspace = true }
-reqwest = { workspace = true }
 uuid = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
 
-[dependencies.tokio-stream]
-version = "0.1"
+
+[dev-dependencies]
+rstest = { workspace = true }
