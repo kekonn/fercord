@@ -124,7 +124,7 @@ jobs:
           wait-for-processing: true
 
   cargo-test:
-    needs: [rust-clippy-analyze, is-changelog-updated]
+    needs: [is-changelog-updated]
     if: ${{ needs.is-changelog-updated.outputs.needs-check == 'true' }}
     name: Run unit tests
     runs-on: ubuntu-latest
