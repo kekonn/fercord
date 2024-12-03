@@ -15,7 +15,7 @@ pub mod db;
 pub mod prelude {
     pub use sqlx_oldapi::any::AnyPool;
 
-    pub use crate::db;
+    pub use crate::db::{self, *};
     pub use crate::kv::{Identifiable, KVClient, KVIdentity};
-    pub use crate::model;
+    pub use crate::model::{self, *};
 }

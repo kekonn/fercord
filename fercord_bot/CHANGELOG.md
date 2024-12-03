@@ -4,6 +4,11 @@
 
 ## [Unreleased] - ReleaseDate
 
+- feat: `/reminder` not also accepts `[day|tomorrow] at [hour][am|pm]` inputs.
+- feat: `/roll` command to roll dice (up to 255d255)
+- feat: `@bot register` prefix-command to register slash commands
+- chore: dependency updates
+
 ## [0.3.5] - 2024-12-02
 - chore: Update dependencies
 
