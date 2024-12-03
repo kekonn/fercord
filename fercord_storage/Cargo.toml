@@ -13,7 +13,7 @@ edition.workspace = true
 repository.workspace = true
 keywords.workspace = true
 readme.workspace = true
-version = "0.3.5"
+version = "0.3.6"
 
 [features]
 default = ["sqlite"]
