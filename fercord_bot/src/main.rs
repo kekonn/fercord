@@ -1,4 +1,6 @@
 use anyhow::Context;
+use discord::commands::register;
+use discord::commands::roll;
 use poise::serenity_prelude::{self as serenity, ActivityData};
 use tracing::*;
 
@@ -42,11 +44,11 @@ async fn main() -> anyhow::Result<()> {
 
     let db_pool = db::setup(config.database_url.as_ref())
         .await
-        .with_context(|| "Error setting up database connection")?;
+        .context("Error setting up database connection")?;
 
     // KV Setup
     event!(Level::DEBUG, "Connecting to KV Store");
-    let kv_client = KVClient::new(&config).with_context(|| "Error building redis client")?;
+    let kv_client = KVClient::new(&config).context("Error building redis client")?;
 
     // Discord setup
     event!(Level::DEBUG, "Discord client setup");
@@ -54,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
     let discord_config = config.clone();
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![reminder(), timezone()],
+            commands: vec![reminder(), timezone(), roll(), register()],
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
@@ -64,7 +66,7 @@ async fn main() -> anyhow::Result<()> {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands)
                     .await
-                    .with_context(|| "Error creating Discord client")?;
+                    .context("Error creating Discord client")?;
 
                 Ok(ServerData {
                     kv_client,

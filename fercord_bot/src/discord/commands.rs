@@ -1,20 +1,31 @@
-use anyhow::{anyhow, Result};
+use std::num::NonZeroU8;
+
+use anyhow::{anyhow, Result, Context as AnyhowContext};
 use chrono::{DateTime, Utc};
 use chrono_tz::{Tz, TZ_VARIANTS};
 use interim::{parse_date_string, Dialect};
 use poise::serenity_prelude as serenity;
 use tracing::{debug, event, field, trace_span, warn, Level};
+use rand::prelude::*;
 
-use fercord_storage::prelude::{
-    db::Repository,
-    model::{guild_timezone::GuildTimezone, reminder::Reminder},
-    *,
-};
-
+use fercord_storage::prelude::{*, guild_timezone::GuildTimezone};
 use crate::discord::Context;
 
 const FROM_NOW: &str = "from now";
 const AT: &str = "at";
+
+/// Register slash commands
+#[poise::command(prefix_command)]
+pub async fn register(ctx: Context<'_>) -> Result<()> {
+    let span = trace_span!(
+        "fercord.discord.register",
+    );
+    let _enter = span.enter();
+
+    poise::builtins::register_application_commands_buttons(ctx).await.context("Error registering slash commands")?;
+
+    Ok(())
+}
 
 /// Set the timezone for this server (used by time related commands).
 #[poise::command(slash_command)]
@@ -73,6 +84,41 @@ pub async fn timezone(
 
         Err(anyhow!("Could not determine the guild id"))
     }
+}
+
+/// Roll dice
+/// 
+/// * count: The amount of dice to roll
+/// * sides: the sides on the dice
+#[poise::command(slash_command)]
+pub async fn roll(ctx: Context<'_>,
+    #[description = "How many dice do you want to roll?"] #[min = 1] #[max = 255] count: NonZeroU8,
+    #[description = "How many sides does the dice have?"] #[min = 2] #[max = 255] sides: NonZeroU8,
+) -> Result<()> {
+    let span = trace_span!(
+        "fercord.discord.roll",
+        guild_id = field::Empty,
+        die_command = "{count}d{sides}"
+    );
+    let _enter = span.enter();
+    event!(Level::TRACE, "Received roll command for {count}d{sides}");
+    let guild_id = ctx.guild_id().context("Error retrieving guild id")?;
+    span.record("guild_id", field::debug(&guild_id));
+
+    ctx.defer_ephemeral().await?;
+
+    let mut rng = rand::thread_rng();
+    
+    let mut rolls: Vec<usize> = Vec::with_capacity(count.get() as usize);
+    rolls.resize(count.get().into(), Default::default());
+    rolls.fill_with(move || rng.gen_range(1..=(sides.get() as usize)));
+
+    let roll_total = rolls.into_iter().sum::<usize>();
+    event!(Level::TRACE, "Rolled {count}d{sides} for a total value of {roll_total}");
+    
+    ctx.say(format!("You rolled {count}d{sides} for a total value of {roll_total}")).await?;
+    
+    Ok(())
 }
 
 /// Create a reminder
