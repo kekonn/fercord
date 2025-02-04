@@ -4,6 +4,8 @@
 
 ## [Unreleased] - ReleaseDate
 
+## [0.3.7] - 2025-02-04
+
 - chore: dependency updates
 
 ## [0.3.6] - 2024-12-03
@@ -30,7 +32,8 @@
 - chore: Update dependencies and adopt new version of Poise
 
 <!-- next-url -->
-[Unreleased]: https://github.com/kekonn/fercord/compare/fercord_storage-v0.3.6...HEAD
+[Unreleased]: https://github.com/kekonn/fercord/compare/fercord_storage-v0.3.7...HEAD
+[0.3.7]: https://github.com/kekonn/fercord/compare/fercord_storage-v0.3.6...fercord_storage-v0.3.7
 [0.3.6]: https://github.com/kekonn/fercord/compare/fercord_storage-v0.3.5...fercord_storage-v0.3.6
 [0.3.5]: https://github.com/kekonn/fercord/compare/v0.3.4...fercord_storage-v0.3.5
 [0.3.4]: https://github.com/kekonn/fercord/compare/v0.3.3...v0.3.4
