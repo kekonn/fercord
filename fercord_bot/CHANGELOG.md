@@ -4,6 +4,8 @@
 
 ## [Unreleased] - ReleaseDate
 
+- chore: dependency updates
+
 ## [0.4.0] - 2024-12-03
 
 - feat: `/reminder` not also accepts `[day|tomorrow] at [hour][am|pm]` inputs.
