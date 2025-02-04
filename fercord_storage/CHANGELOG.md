@@ -4,6 +4,8 @@
 
 ## [Unreleased] - ReleaseDate
 
+- chore: dependency updates
+
 ## [0.3.6] - 2024-12-03
 
 - feat: prelude now includes a lot more types

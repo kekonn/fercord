@@ -5,6 +5,7 @@
 <!-- next-header -->
 
 ## [Unreleased] - ReleaseDate
+- chore: Updated dependencies
 
 ## [0.1.1] - 2024-12-02
 
