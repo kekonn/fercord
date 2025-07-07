@@ -1177,7 +1177,7 @@ dependencies = [
  "fercord_storage",
  "interim",
  "poise",
- "rand 0.8.5",
+ "rand 0.9.1",
  "rstest",
  "serde",
  "serde_json",
