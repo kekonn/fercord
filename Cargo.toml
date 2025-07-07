@@ -20,12 +20,12 @@ chrono = "0.4"
 chrono-tz = "0.10"
 tracing = "0.1"
 tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
-interim = { version = "0.1", features = ["default", "chrono"]}
+interim = { version = "0.2", features = ["default", "chrono_0_4"]}
 thiserror = "2"
 clap = { version = "4", features = ["derive", "env"] }
 reqwest = { version = "0.12", features = ["stream", "rustls-tls"]}
 tokio-stream = "0.1"
-rstest = "0.23"
+rstest = "0.25"
 
 fercord_common = { path = "./fercord_common", version = "0.1"}
 fercord_storage = { path = "./fercord_storage", version = "0.3"}
