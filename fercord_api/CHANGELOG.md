@@ -6,6 +6,8 @@ This crate runs the bot management API.
 
 ## [Unreleased] - ReleaseDate
 
+- chore: dep updates
+
 ### Added
 - Initial release
 
