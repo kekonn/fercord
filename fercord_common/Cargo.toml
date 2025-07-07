@@ -1,6 +1,6 @@
 [package]
 name = "fercord_common"
-version = "0.1.3"
+version = "0.1.2"
 description = "Crate with common types used by the Fercord bot"
 license.workspace = true
 authors.workspace = true
