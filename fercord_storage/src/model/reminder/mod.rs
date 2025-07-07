@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use poise::async_trait;
 use sqlx_oldapi::{any::AnyRow, Any, AnyPool, FromRow, Row};
 use tracing::{event, trace, Level};
@@ -59,7 +59,7 @@ impl<'r> ReminderRepo<'r> {
         event!(Level::TRACE, "Getting all reminders before {}", &moment);
 
         let query = sqlx_oldapi::query(REMINDERS_BETWEEN_QUERY)
-            .bind(NaiveDateTime::UNIX_EPOCH)
+            .bind(DateTime::UNIX_EPOCH)
             .bind(moment)
             .fetch_all(self.pool)
             .await

@@ -4,6 +4,8 @@
 
 ## [Unreleased] - ReleaseDate
 
+- chore: dependency updates
+
 ## [0.3.7] - 2025-02-04
 
 - chore: dependency updates

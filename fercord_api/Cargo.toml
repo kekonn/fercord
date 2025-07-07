@@ -34,6 +34,6 @@ serenity = { version = "0.12", features = ["default", "chrono", "model"]}
 actix-web = "4"
 actix-session = { version = "0.10", features = ["default", "redis-session"]}
 utoipa = { version = "5", features = ["default", "chrono", "actix_extras", "uuid"]}
-utoipa-scalar = { version = "0.2", features = ["actix-web"]}
+utoipa-scalar = { version = "0.3", features = ["actix-web"]}
 utoipa-actix-web = "0.1"
 

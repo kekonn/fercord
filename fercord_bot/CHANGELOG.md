@@ -3,6 +3,7 @@
 <!-- next-header -->
 
 ## [Unreleased] - ReleaseDate
+- chore: dependency updates
 
 ## [0.4.1] - 2025-02-04
 

@@ -1,15 +1,15 @@
 use std::num::NonZeroU8;
 
-use anyhow::{anyhow, Result, Context as AnyhowContext};
+use anyhow::{anyhow, Context as AnyhowContext, Result};
 use chrono::{DateTime, Utc};
 use chrono_tz::{Tz, TZ_VARIANTS};
 use interim::{parse_date_string, Dialect};
 use poise::serenity_prelude as serenity;
-use tracing::{debug, event, field, trace_span, warn, Level};
 use rand::prelude::*;
+use tracing::{debug, event, field, trace_span, warn, Level};
 
-use fercord_storage::prelude::{*, guild_timezone::GuildTimezone};
 use crate::discord::Context;
+use fercord_storage::prelude::{guild_timezone::GuildTimezone, *};
 
 const FROM_NOW: &str = "from now";
 const AT: &str = "at";
@@ -17,12 +17,12 @@ const AT: &str = "at";
 /// Register slash commands
 #[poise::command(prefix_command)]
 pub async fn register(ctx: Context<'_>) -> Result<()> {
-    let span = trace_span!(
-        "fercord.discord.register",
-    );
+    let span = trace_span!("fercord.discord.register",);
     let _enter = span.enter();
 
-    poise::builtins::register_application_commands_buttons(ctx).await.context("Error registering slash commands")?;
+    poise::builtins::register_application_commands_buttons(ctx)
+        .await
+        .context("Error registering slash commands")?;
 
     Ok(())
 }
@@ -87,13 +87,20 @@ pub async fn timezone(
 }
 
 /// Roll dice
-/// 
+///
 /// * count: The amount of dice to roll
 /// * sides: the sides on the dice
 #[poise::command(slash_command)]
-pub async fn roll(ctx: Context<'_>,
-    #[description = "How many dice do you want to roll?"] #[min = 1] #[max = 255] count: NonZeroU8,
-    #[description = "How many sides does the dice have?"] #[min = 2] #[max = 255] sides: NonZeroU8,
+pub async fn roll(
+    ctx: Context<'_>,
+    #[description = "How many dice do you want to roll?"]
+    #[min = 1]
+    #[max = 255]
+    count: NonZeroU8,
+    #[description = "How many sides does the dice have?"]
+    #[min = 2]
+    #[max = 255]
+    sides: NonZeroU8,
 ) -> Result<()> {
     let span = trace_span!(
         "fercord.discord.roll",
@@ -107,17 +114,23 @@ pub async fn roll(ctx: Context<'_>,
 
     ctx.defer_ephemeral().await?;
 
-    let mut rng = rand::thread_rng();
-    
+    let mut rng = rand::rng();
+
     let mut rolls: Vec<usize> = Vec::with_capacity(count.get() as usize);
     rolls.resize(count.get().into(), Default::default());
-    rolls.fill_with(move || rng.gen_range(1..=(sides.get() as usize)));
+    rolls.fill_with(move || rng.random_range(1..=(sides.get() as usize)));
 
     let roll_total = rolls.into_iter().sum::<usize>();
-    event!(Level::TRACE, "Rolled {count}d{sides} for a total value of {roll_total}");
-    
-    ctx.say(format!("You rolled {count}d{sides} for a total value of {roll_total}")).await?;
-    
+    event!(
+        Level::TRACE,
+        "Rolled {count}d{sides} for a total value of {roll_total}"
+    );
+
+    ctx.say(format!(
+        "You rolled {count}d{sides} for a total value of {roll_total}"
+    ))
+    .await?;
+
     Ok(())
 }
 
