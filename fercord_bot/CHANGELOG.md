@@ -4,6 +4,8 @@
 
 ## [Unreleased] - ReleaseDate
 
+## [0.4.3] - 2026-03-25
+
 - chore: dependency updates
 - 
 ## [0.4.2] - 2025-07-07
@@ -69,7 +71,8 @@
 
 
 <!-- next-url -->
-[Unreleased]: https://github.com/kekonn/fercord/compare/fercord_bot-v0.4.2...HEAD
+[Unreleased]: https://github.com/kekonn/fercord/compare/fercord_bot-v0.4.3...HEAD
+[0.4.3]: https://github.com/kekonn/fercord/compare/fercord_bot-v0.4.2...fercord_bot-v0.4.3
 [0.4.2]: https://github.com/kekonn/fercord/compare/fercord_bot-v0.4.1...fercord_bot-v0.4.2
 [0.4.1]: https://github.com/kekonn/fercord/compare/fercord_bot-v0.4.0...fercord_bot-v0.4.1
 [0.4.0]: https://github.com/kekonn/fercord/compare/fercord_bot-v0.3.5...fercord_bot-v0.4.0
