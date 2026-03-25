@@ -17,23 +17,27 @@ default = ["fercord_storage/sqlite"]
 [dependencies]
 fercord_storage = { workspace = true }
 fercord_common = { workspace = true }
-serde = { workspace = true}
-serde_json = { workspace = true}
+serde = { workspace = true }
+serde_json = { workspace = true }
 tracing = { workspace = true }
-tracing-subscriber = { workspace = true}
+tracing-subscriber = { workspace = true }
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
 thiserror = { workspace = true }
-reqwest = { workspace = true, features = ["json"]}
+reqwest = { workspace = true, features = ["json", "form"] }
 mime = "0.3"
 clap = { workspace = true }
 uuid = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
-serenity = { version = "0.12", features = ["default", "chrono", "model"]}
+serenity = { version = "0.12", features = ["default", "chrono", "model"] }
 actix-web = "4"
-actix-session = { version = "0.10", features = ["default", "redis-session"]}
-utoipa = { version = "5", features = ["default", "chrono", "actix_extras", "uuid"]}
-utoipa-scalar = { version = "0.3", features = ["actix-web"]}
+actix-session = { version = "0.11", features = ["default", "redis-session"] }
+utoipa = { version = "5", features = [
+  "default",
+  "chrono",
+  "actix_extras",
+  "uuid",
+] }
+utoipa-scalar = { version = "0.3", features = ["actix-web"] }
 utoipa-actix-web = "0.1"
-

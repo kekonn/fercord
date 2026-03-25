@@ -5,7 +5,6 @@ This crate runs the bot management API.
 <!-- next-header -->
 
 ## [Unreleased] - ReleaseDate
-
 - chore: dep updates
 
 ### Added

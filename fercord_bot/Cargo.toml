@@ -17,9 +17,9 @@ default = ["fercord_storage/sqlite"]
 [dependencies]
 fercord_storage = { workspace = true }
 fercord_common = { workspace = true }
-poise = { workspace = true}
-serde = { workspace = true}
-serde_json = { workspace = true}
+poise = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
@@ -27,8 +27,8 @@ interim = { workspace = true }
 uuid = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
-tracing-subscriber = {version = "0.3", features = ["default", "env-filter"]}
-rand = "0.9"
+tracing-subscriber = { version = "0.3", features = ["default", "env-filter"] }
+rand = "0.10"
 
 
 [dev-dependencies]

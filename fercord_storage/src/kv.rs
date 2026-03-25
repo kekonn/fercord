@@ -5,7 +5,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use redis::{AsyncCommands, Client, ConnectionLike, ToRedisArgs};
+use redis::{AsyncCommands, Client, ConnectionLike, ToSingleRedisArg};
 use serde::{de::DeserializeOwned, Serialize};
 use tracing::*;
 
@@ -39,7 +39,7 @@ impl KVClient {
     /// Save a value to the KV store.
     pub async fn save<T>(&self, record: T) -> Result<()>
     where
-        T: Identifiable + Serialize + Send + Sync + ToRedisArgs + Debug,
+        T: Identifiable + Serialize + Send + Sync + ToSingleRedisArg + Debug,
     {
         let span = trace_span!(
             "storage.kv_client",
